@@ -1,4 +1,4 @@
-# Card 卡片
+# Table 表格
 
 通用卡片容器。
 
@@ -10,7 +10,7 @@
 
 <code src="./demos/demo1.tsx"></code>
 
-## Card
+## Table
 
 ### 属性
 

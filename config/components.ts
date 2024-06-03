@@ -84,6 +84,7 @@ export const components = {
     '/components/result-page',
     '/components/tree-select',
     '/components/virtual-input',
+    '/components/table',
     // '/components/scroll-mask',
   ],
 }

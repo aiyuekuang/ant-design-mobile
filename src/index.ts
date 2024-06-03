@@ -233,6 +233,9 @@ export type {
   VirtualInputProps,
   VirtualInputRef,
 } from './components/virtual-input'
+export { default as Table } from './components/table'
+
+
 export { default as WaterMark } from './components/water-mark'
 export type { WaterMarkProps } from './components/water-mark'
 export { default as Footer } from './components/footer'

@@ -1,5 +1,5 @@
-import './card.less'
-import { Card } from './card'
-export type { CardProps } from './card'
+import './table.less'
+import { Table } from './table'
+export type { CardProps } from './table'
 
-export default Card
+export default Table
