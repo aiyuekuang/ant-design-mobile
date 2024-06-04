@@ -1,12 +1,74 @@
 import React, {FC, ReactNode, useEffect, useRef, useState} from 'react'
 import {NativeProps, withNativeProps} from '../../utils/native-props'
 import {Affix} from "antd";
-import {columns, dataSource1} from "antd-mobile/es/components/table/data";
 import {DownFill} from "antd-mobile-icons";
 import {cloneDeep} from "lodash";
 
 const classPrefix = `adm-table`
+interface DataType {
+  key: React.Key;
+  name: string;
+  age: number;
+  address: string;
+}
 
+export const columns = [
+  {
+    title: '名称',
+    width: 100,
+    dataIndex: 'name',
+    key: 'name',
+    fixed: 'left',
+    sorter:true,
+    render: (text:any) => {
+      return (
+        <a href="https://blog.csdn.net/m0_51514727/article/details/135870249">{text}</a>
+      )
+    }
+  },
+  {
+    title: '年龄',
+    width: 100,
+    dataIndex: 'age',
+    key: 'age',
+    sorter: true,
+    render: (text:any) => {
+      return (
+        <a href="https://blog.csdn.net/m0_51514727/article/details/135870249">{text}</a>
+      )
+    }
+  },
+  {title: 'Column 1', dataIndex: '1', key: '1'},
+  {title: 'Column 1', dataIndex: '2', key: '1'},
+  {title: 'Column 1', dataIndex: '3', key: '1'},
+  {title: 'Column 1', dataIndex: '4', key: '1'},
+  {title: 'Column 1', dataIndex: '5', key: '1'},
+];
+
+export const dataSource1: any = [
+  {
+    key: '1',
+    name: 'John Brown111111',
+    age: 32,
+    address: 'New York Park',
+    "1": 'London Park',
+  },
+  {
+    key: '2',
+    name: 'aaaaaJim Green',
+    age: 40,
+    address: 'London Park',
+    "1": 'London Park',
+
+  }, {
+    key: '3',
+    name: 'Jim Green',
+    age: 100,
+    address: 'London Park',
+    "1": 'London Park',
+
+  }
+];
 
 export type CardProps = {
   title?: ReactNode
@@ -20,7 +82,7 @@ export type CardProps = {
 // 1.右侧主体
 
 
-let hideFunBody = (col: any, layer = main, type = "head") => {
+let hideFunBody = (col: any, layer = main, type = "head"):any => {
   if (layer === main || layer === head) {
     if (col.fixed) {
       return {visibility: "hidden"}
@@ -110,7 +172,7 @@ export const Table: FC<any> = (props) => {
   }
 
 
-  let HeadDom = ({layer, setDataSource, sortObj, setSortObj}) => {
+  let HeadDom = ({layer, setDataSource, sortObj, setSortObj}:any) => {
 
     console.log(2212, sortObj)
     return (
@@ -130,7 +192,7 @@ export const Table: FC<any> = (props) => {
               <div
                 className={`${classPrefix}-head-item`}
                 style={{width: (data.width || 80)}}
-                onClick={() => {
+                onClick={data.sorter?() => {
                   let orderIndex = sortFun(data, sortObj);
 
                   // 先处理数据
@@ -141,7 +203,7 @@ export const Table: FC<any> = (props) => {
                       // 字符串排序
                       if (typeof _org[0][data.dataIndex] === "string") {
                         if (orderIndex === 1) {
-                          _org.sort((a, b) => {
+                          _org.sort((a:any, b:any) => {
                             // 如果a和b都以'-'开头，则按正常顺序排序
                             if (a[data.dataIndex].startsWith('-') && b[data.dataIndex].startsWith('-')) {
                               return a[data.dataIndex].localeCompare(b[data.dataIndex]);
@@ -162,7 +224,7 @@ export const Table: FC<any> = (props) => {
                           })
 
                         } else if (orderIndex === 2) {
-                          _org.sort((a, b) => {
+                          _org.sort((a:any, b:any) => {
                             // 如果a和b都不以'-'开头，则按降序排序
                             if (!a[data.dataIndex].startsWith('-') && !b[data.dataIndex].startsWith('-')) {
                               return b[data.dataIndex].localeCompare(a[data.dataIndex]); // 注意这里是 b 减 a，实现降序
@@ -186,9 +248,9 @@ export const Table: FC<any> = (props) => {
                       // 数字排序
                       if (typeof _org[0][data.dataIndex] === "number") {
                         if (orderIndex === 1) {
-                          _org.sort((a, b) => a[data.dataIndex] - b[data.dataIndex]);
+                          _org.sort((a:any, b:any) => a[data.dataIndex] - b[data.dataIndex]);
                         } else if (orderIndex === 2) {
-                          _org.sort((a, b) => b[data.dataIndex] - a[data.dataIndex]);
+                          _org.sort((a:any, b:any) => b[data.dataIndex] - a[data.dataIndex]);
                         }
                       }
 
@@ -210,11 +272,11 @@ export const Table: FC<any> = (props) => {
                   })
 
 
-                }}
+                }:()=>{}}
               >
                 <div
                   className={`${classPrefix}-head-item-title`}>{typeof data.title === "function" ? data.title(data) : data.title}</div>
-                <div className={`${classPrefix}-head-item-sort`}>
+                {data.sorter?<div className={`${classPrefix}-head-item-sort`}>
                   <div>
                     <DownFill
                       fontSize={8}
@@ -227,7 +289,7 @@ export const Table: FC<any> = (props) => {
                       style={{color: sortHandler(data, sortObj, 2)}}
                     />
                   </div>
-                </div>
+                </div>:null}
               </div>
             </div>
           )
@@ -235,13 +297,13 @@ export const Table: FC<any> = (props) => {
       </div>
     )
   }
-  let BodyDom = ({layer, dataSource}) => {
+  let BodyDom = ({layer, dataSource}:any) => {
 
     console.log(555, dataSource)
     return (
       <div className={`${classPrefix}-body`}>
         {
-          dataSource.map((dataItem: any, i) => {
+          dataSource.map((dataItem: any) => {
             return (
               <div className={`${classPrefix}-body-item`} key={dataItem[rowKey]}>
                 {columns.map((data: any, i) => {
@@ -270,7 +332,7 @@ export const Table: FC<any> = (props) => {
   }
   // <Affix>
 
-  let TableDomLayer = ({layer = main, onScroll = null, offset = 0, setDataSource, dataSource, sortObj, setSortObj}) => {
+  let TableDomLayer = ({layer = main, onScroll = null, offset = 0, setDataSource, dataSource, sortObj, setSortObj}:any) => {
 
     console.log(666, dataSource)
     let scrollRef: any = useRef(null);
