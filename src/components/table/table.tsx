@@ -5,6 +5,7 @@ import {DownFill} from "antd-mobile-icons";
 import {cloneDeep} from "lodash";
 
 const classPrefix = `adm-table`
+
 interface DataType {
   key: React.Key;
   name: string;
@@ -19,8 +20,8 @@ export const columns = [
     dataIndex: 'name',
     key: 'name',
     fixed: 'left',
-    sorter:true,
-    render: (text:any) => {
+    sorter: true,
+    render: (text: any) => {
       return (
         <a href="https://blog.csdn.net/m0_51514727/article/details/135870249">{text}</a>
       )
@@ -32,7 +33,7 @@ export const columns = [
     dataIndex: 'age',
     key: 'age',
     sorter: true,
-    render: (text:any) => {
+    render: (text: any) => {
       return (
         <a href="https://blog.csdn.net/m0_51514727/article/details/135870249">{text}</a>
       )
@@ -82,7 +83,7 @@ export type CardProps = {
 // 1.右侧主体
 
 
-let hideFunBody = (col: any, layer = main, type = "head"):any => {
+let hideFunBody = (col: any, layer = main, type = "head"): any => {
   if (layer === main || layer === head) {
     if (col.fixed) {
       return {visibility: "hidden"}
@@ -172,7 +173,7 @@ export const Table: FC<any> = (props) => {
   }
 
 
-  let HeadDom = ({layer, setDataSource, sortObj, setSortObj}:any) => {
+  let HeadDom = ({layer, setDataSource, sortObj, setSortObj}: any) => {
 
     console.log(2212, sortObj)
     return (
@@ -192,7 +193,8 @@ export const Table: FC<any> = (props) => {
               <div
                 className={`${classPrefix}-head-item`}
                 style={{width: (data.width || 80)}}
-                onClick={data.sorter?() => {
+                onClick={data.sorter ? () => {
+                  console.log(222)
                   let orderIndex = sortFun(data, sortObj);
 
                   // 先处理数据
@@ -203,7 +205,7 @@ export const Table: FC<any> = (props) => {
                       // 字符串排序
                       if (typeof _org[0][data.dataIndex] === "string") {
                         if (orderIndex === 1) {
-                          _org.sort((a:any, b:any) => {
+                          _org.sort((a: any, b: any) => {
                             // 如果a和b都以'-'开头，则按正常顺序排序
                             if (a[data.dataIndex].startsWith('-') && b[data.dataIndex].startsWith('-')) {
                               return a[data.dataIndex].localeCompare(b[data.dataIndex]);
@@ -224,7 +226,7 @@ export const Table: FC<any> = (props) => {
                           })
 
                         } else if (orderIndex === 2) {
-                          _org.sort((a:any, b:any) => {
+                          _org.sort((a: any, b: any) => {
                             // 如果a和b都不以'-'开头，则按降序排序
                             if (!a[data.dataIndex].startsWith('-') && !b[data.dataIndex].startsWith('-')) {
                               return b[data.dataIndex].localeCompare(a[data.dataIndex]); // 注意这里是 b 减 a，实现降序
@@ -248,9 +250,9 @@ export const Table: FC<any> = (props) => {
                       // 数字排序
                       if (typeof _org[0][data.dataIndex] === "number") {
                         if (orderIndex === 1) {
-                          _org.sort((a:any, b:any) => a[data.dataIndex] - b[data.dataIndex]);
+                          _org.sort((a: any, b: any) => a[data.dataIndex] - b[data.dataIndex]);
                         } else if (orderIndex === 2) {
-                          _org.sort((a:any, b:any) => b[data.dataIndex] - a[data.dataIndex]);
+                          _org.sort((a: any, b: any) => b[data.dataIndex] - a[data.dataIndex]);
                         }
                       }
 
@@ -258,7 +260,6 @@ export const Table: FC<any> = (props) => {
                       return _org
                     })
                   }
-
 
                   setSortObj((org: any) => {
                     let obj = {
@@ -270,13 +271,18 @@ export const Table: FC<any> = (props) => {
                     onChange({current: 1, pageSize: 10}, {}, obj, {})
                     return obj
                   })
-
-
-                }:()=>{}}
+                } : () => {
+                }}
               >
                 <div
-                  className={`${classPrefix}-head-item-title`}>{typeof data.title === "function" ? data.title(data) : data.title}</div>
-                {data.sorter?<div className={`${classPrefix}-head-item-sort`}>
+                  className={`${classPrefix}-head-item-title`}
+                  style={{
+                    ...(data.align?{textAlign:data.align}:{})
+                  }}
+                >
+                  {typeof data.title === "function" ? data.title(data) : data.title}
+                </div>
+                {data.sorter ? <div className={`${classPrefix}-head-item-sort`}>
                   <div>
                     <DownFill
                       fontSize={8}
@@ -289,7 +295,7 @@ export const Table: FC<any> = (props) => {
                       style={{color: sortHandler(data, sortObj, 2)}}
                     />
                   </div>
-                </div>:null}
+                </div> : null}
               </div>
             </div>
           )
@@ -297,7 +303,7 @@ export const Table: FC<any> = (props) => {
       </div>
     )
   }
-  let BodyDom = ({layer, dataSource}:any) => {
+  let BodyDom = ({layer, dataSource}: any) => {
 
     console.log(555, dataSource)
     return (
@@ -332,7 +338,15 @@ export const Table: FC<any> = (props) => {
   }
   // <Affix>
 
-  let TableDomLayer = ({layer = main, onScroll = null, offset = 0, setDataSource, dataSource, sortObj, setSortObj}:any) => {
+  let TableDomLayer = ({
+                         layer = main,
+                         onScroll = null,
+                         offset = 0,
+                         setDataSource,
+                         dataSource,
+                         sortObj,
+                         setSortObj
+                       }: any) => {
 
     console.log(666, dataSource)
     let scrollRef: any = useRef(null);
@@ -376,7 +390,7 @@ export const Table: FC<any> = (props) => {
             background: "#fff",
             boxShadow: "inset 10px 0 8px -8px rgba(5, 5, 5, 0.06)"
           } : {}),
-          ...(layer === main || layer === left || layer === leftBackground ? {pointerEvents: "none"} : {}),
+          ...(layer === main || layer === left || layer === leftBackground || layer === head ? {pointerEvents: "none"} : {}),
         }}>
         {layer === head || layer === headLeft ? <Affix>{dom}</Affix> : dom}
       </div>
@@ -396,6 +410,7 @@ export const Table: FC<any> = (props) => {
             setScrollValue(data)
           }}
           dataSource={dataSource_}
+          setDataSource={setDataSource}
           setSortObj={setSortObj} sortObj={sortObj}
         />
         <TableDomLayer offset={scrollValue} layer={main} dataSource={dataSource_} setSortObj={setSortObj}
@@ -403,6 +418,7 @@ export const Table: FC<any> = (props) => {
         <TableDomLayer offset={scrollValue} layer={leftBackground} dataSource={dataSource_} setSortObj={setSortObj}
                        sortObj={sortObj}/>
         <TableDomLayer layer={left} dataSource={dataSource_} setSortObj={setSortObj} sortObj={sortObj}/>
+
         <TableDomLayer offset={scrollValue} layer={head} setDataSource={setDataSource} setSortObj={setSortObj}
                        sortObj={sortObj}/>
 
