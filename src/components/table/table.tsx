@@ -67,7 +67,6 @@ export const dataSource1: any = [
     age: 100,
     address: 'London Park',
     "1": 'London Park',
-
   }
 ];
 
@@ -117,17 +116,16 @@ let hideFunBody = (col: any, layer = main, type = "head"): any => {
   if (layer === headLeft) {
     if (!col.fixed || type === "body") {
       return {display: "none", pointerEvents: "none"}
-    } else {
-      return {background: "#fff"}
     }
   }
 }
 
 let mask = 1;
 let main = 2;
-let head = 3;
-let leftBackground = 4;
-let left = 5;
+let leftBackground = 3;
+let left = 4;
+let head = 5;
+
 let headLeft = 6;
 
 const sortArr = [{
@@ -160,7 +158,7 @@ const sortFun = (data: any, sortObj: any) => {
 export const Table: FC<any> = (props) => {
   const {
     rowKey = "key", onChange = () => {
-    }, dataSource = dataSource1
+    }, dataSource = dataSource1, style = {}, className="", HeadExtra
   } = props;
 
   let sortHandler = (data: any, sortObj: any, key = 1) => {
@@ -175,13 +173,15 @@ export const Table: FC<any> = (props) => {
 
   let HeadDom = ({layer, setDataSource, sortObj, setSortObj}: any) => {
 
-    console.log(2212, sortObj)
+
     return (
-      <div className={`${classPrefix}-head`}
-           style={{
-             ...(layer === head || layer === headLeft ? {background: "#fff"} : {}),
-           }}
+      <div
+        className={`${classPrefix}-head`}
+        style={{
+          // ...(layer === headLeft ? {background: "#fff"} : {}),
+        }}
       >
+        {layer === head && HeadExtra?<HeadExtra columns={columns}/>:null}
         {columns.map((data: any) => {
           return (
             <div
@@ -194,7 +194,7 @@ export const Table: FC<any> = (props) => {
                 className={`${classPrefix}-head-item`}
                 style={{width: (data.width || 80)}}
                 onClick={data.sorter ? () => {
-                  console.log(222)
+
                   let orderIndex = sortFun(data, sortObj);
 
                   // 先处理数据
@@ -277,7 +277,7 @@ export const Table: FC<any> = (props) => {
                 <div
                   className={`${classPrefix}-head-item-title`}
                   style={{
-                    ...(data.align?{textAlign:data.align}:{})
+                    ...(data.align ? {textAlign: data.align} : {})
                   }}
                 >
                   {typeof data.title === "function" ? data.title(data) : data.title}
@@ -305,13 +305,17 @@ export const Table: FC<any> = (props) => {
   }
   let BodyDom = ({layer, dataSource}: any) => {
 
-    console.log(555, dataSource)
     return (
-      <div className={`${classPrefix}-body`}>
+      <div className={`${classPrefix}-body`} style={{
+        ...(layer === main ? {background: "#fff"} : {})
+      }}>
         {
           dataSource.map((dataItem: any) => {
+
             return (
-              <div className={`${classPrefix}-body-item`} key={dataItem[rowKey]}>
+              <div
+                className={`${classPrefix}-body-item ${layer === main ? `${classPrefix}-body-item-background` : ""} ${layer === left ? `${classPrefix}-body-item-background-left` : ""}`}
+                key={dataItem[rowKey]}>
                 {columns.map((data: any, i) => {
                   return (
                     <div
@@ -348,7 +352,6 @@ export const Table: FC<any> = (props) => {
                          setSortObj
                        }: any) => {
 
-    console.log(666, dataSource)
     let scrollRef: any = useRef(null);
 
     useEffect(() => {
@@ -369,7 +372,6 @@ export const Table: FC<any> = (props) => {
 
         }}
         onScroll={onScroll ? (e: any) => {
-          console.log(333, e.target.scrollLeft)
           onScroll(e.target.scrollLeft)
         } : () => {
         }}
@@ -381,17 +383,18 @@ export const Table: FC<any> = (props) => {
 
     return (
       <div
-        className={`${classPrefix}-warp-abs`}
+        className={`${classPrefix}-warp-abs ${className}`}
         style={{
           zIndex: layer * 500,
           ...(layer !== mask ? {position: "absolute"} : {}),
-          ...(layer === leftBackground || layer === main ? {background: "#fff"} : {}),
+          ...(layer === main ? {background: "#fff"} : {}),
           ...(layer === leftBackground ? {
             background: "#fff",
             boxShadow: "20px 0 24px 0px rgba(0, 0, 0, 0.05)",
-            height:"100%"
+            height: "100%"
           } : {}),
           ...(layer === main || layer === left || layer === leftBackground || layer === head ? {pointerEvents: "none"} : {}),
+          ...style
         }}>
         {layer === head || layer === headLeft ? <Affix>{dom}</Affix> : dom}
       </div>
