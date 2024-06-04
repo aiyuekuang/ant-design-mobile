@@ -381,14 +381,15 @@ export const Table: FC<any> = (props) => {
 
     return (
       <div
-        className={`${classPrefix}-warp_abs`}
+        className={`${classPrefix}-warp-abs`}
         style={{
           zIndex: layer * 500,
           ...(layer !== mask ? {position: "absolute"} : {}),
           ...(layer === leftBackground || layer === main ? {background: "#fff"} : {}),
           ...(layer === leftBackground ? {
             background: "#fff",
-            boxShadow: "20px 0 24px 0px rgba(0, 0, 0, 0.05)"
+            boxShadow: "20px 0 24px 0px rgba(0, 0, 0, 0.05)",
+            height:"100%"
           } : {}),
           ...(layer === main || layer === left || layer === leftBackground || layer === head ? {pointerEvents: "none"} : {}),
         }}>
