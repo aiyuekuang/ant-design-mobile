@@ -2,20 +2,42 @@
 
 .@{class-prefix-table} {
   background: #fff;
+  -webkit-overflow-scrolling: touch;
   &-head {
     display: flex;
-
+  padding: 10px 0;
+    width: max-content;
+    &-item{
+      display: flex;
+      justify-content:space-between;
+      align-items:center;
+      &-sort{
+        margin-right: 2px;
+        >div{
+          display: flex;
+          >svg{
+            color: #C9CDD4;
+          }
+        }
+      }
+    }
   }
   &-body-item{
     display: flex;
-    padding: 30px 0;
+    &-text{
+      padding: 30px 0;
+    }
+  }
+  &-warp_abs{
+    max-width: 100%;
+    left: 0;
+    top:0;
   }
   &-warp{
     overflow-x:scroll;
     max-width: 100%;
-    left: 0;
-    top:0;
-    background: #fff;
+
+    //background: #fff;
   }
   &-fixed{
     position: relative;
@@ -32,6 +54,7 @@
       overflow-x:auto;
       .adm-table-warp{
         width: auto;
+
       }
     }
   }
