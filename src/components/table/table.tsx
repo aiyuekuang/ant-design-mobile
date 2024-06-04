@@ -388,7 +388,7 @@ export const Table: FC<any> = (props) => {
           ...(layer === leftBackground || layer === main ? {background: "#fff"} : {}),
           ...(layer === leftBackground ? {
             background: "#fff",
-            boxShadow: "inset 10px 0 8px -8px rgba(5, 5, 5, 0.06)"
+            boxShadow: "20px 0 24px 0px rgba(0, 0, 0, 0.05)"
           } : {}),
           ...(layer === main || layer === left || layer === leftBackground || layer === head ? {pointerEvents: "none"} : {}),
         }}>
