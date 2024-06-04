@@ -12,12 +12,14 @@
     width: max-content;
     background: #F2F3F5;
     position: relative;
+    border-bottom: 1px solid #E5E6EA;
+
     &-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 0 5px;
-
+      position: relative;
 
       &-title {
         flex: 1;
@@ -38,19 +40,24 @@
   &-body-item {
     display: flex;
     width: max-content;
-    &-background{
-      &:nth-child(even){
-        background: #F7F8FA;
-      }
-
-    }
-    &-background-left{
-      &:nth-child(even){
-        >div{
-          background: #F7F8FA;
-        }
-      }
-    }
+    border-bottom: 1px solid #E5E6EA;
+    //&:last-child{
+    //  border-bottom:none;
+    //
+    //}
+    //&-background{
+    //  &:nth-child(even){
+    //    background: #F7F8FA;
+    //  }
+    //
+    //}
+    //&-background-left{
+    //  &:nth-child(even){
+    //    >div{
+    //      background: #F7F8FA;
+    //    }
+    //  }
+    //}
     &-text {
       padding: 10px 0;
 

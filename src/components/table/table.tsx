@@ -2,16 +2,18 @@ import React, {FC, ReactNode, useEffect, useRef, useState} from 'react'
 import {NativeProps, withNativeProps} from '../../utils/native-props'
 import {Affix} from "antd";
 import {DownFill} from "antd-mobile-icons";
-import {cloneDeep} from "lodash";
+import {cloneDeep,throttle} from "lodash";
 
 const classPrefix = `adm-table`
 
-interface DataType {
-  key: React.Key;
-  name: string;
-  age: number;
-  address: string;
+function isEvenOrOdd(num: number) {
+  if (num % 2 === 0) {
+    return true
+  } else {
+    return false
+  }
 }
+
 
 export const columns = [
   {
@@ -37,7 +39,14 @@ export const columns = [
       return (
         <a href="https://blog.csdn.net/m0_51514727/article/details/135870249">{text}</a>
       )
-    }
+    },
+    children: [
+      {
+        title: 'aaa',
+        dataIndex: 'aaa',
+        width: 150,
+        sorter: (a:any, b:any) => a.age - b.age,
+      },]
   },
   {title: 'Column 1', dataIndex: '1', key: '1'},
   {title: 'Column 1', dataIndex: '2', key: '1'},
@@ -53,6 +62,7 @@ export const dataSource1: any = [
     age: 32,
     address: 'New York Park',
     "1": 'London Park',
+    "aaa": 'London Park',
   },
   {
     key: '2',
@@ -60,6 +70,8 @@ export const dataSource1: any = [
     age: 40,
     address: 'London Park',
     "1": 'London Park',
+    "aaa": 'London Park',
+    // background: "#000"
 
   }, {
     key: '3',
@@ -67,6 +79,8 @@ export const dataSource1: any = [
     age: 100,
     address: 'London Park',
     "1": 'London Park',
+    "aaa": 'London Park',
+
   }
 ];
 
@@ -155,10 +169,10 @@ const sortFun = (data: any, sortObj: any) => {
 }
 // console.log(777,dataSource1.sort((a, b) => a.name.localeCompare(b.name)))
 
-export const Table: FC<any> = (props) => {
+export const Table: FC<any> = (props:any) => {
   const {
     rowKey = "key", onChange = () => {
-    }, dataSource = dataSource1, style = {}, className="", HeadExtra
+    }, dataSource = dataSource1, style = {}, className = "", HeadExtra
   } = props;
 
   let sortHandler = (data: any, sortObj: any, key = 1) => {
@@ -173,7 +187,6 @@ export const Table: FC<any> = (props) => {
 
   let HeadDom = ({layer, setDataSource, sortObj, setSortObj}: any) => {
 
-
     return (
       <div
         className={`${classPrefix}-head`}
@@ -181,7 +194,7 @@ export const Table: FC<any> = (props) => {
           // ...(layer === headLeft ? {background: "#fff"} : {}),
         }}
       >
-        {layer === head && HeadExtra?<HeadExtra columns={columns}/>:null}
+        {layer === head && HeadExtra ? <HeadExtra columns={columns}/> : null}
         {columns.map((data: any) => {
           return (
             <div
@@ -261,7 +274,7 @@ export const Table: FC<any> = (props) => {
                     })
                   }
 
-                  setSortObj((org: any) => {
+                  setSortObj(() => {
                     let obj = {
                       field: data.dataIndex,
                       orderIndex: orderIndex,
@@ -310,12 +323,16 @@ export const Table: FC<any> = (props) => {
         ...(layer === main ? {background: "#fff"} : {})
       }}>
         {
-          dataSource.map((dataItem: any) => {
+          dataSource.map((dataItem: any, t: number) => {
 
             return (
               <div
                 className={`${classPrefix}-body-item ${layer === main ? `${classPrefix}-body-item-background` : ""} ${layer === left ? `${classPrefix}-body-item-background-left` : ""}`}
-                key={dataItem[rowKey]}>
+                key={dataItem[rowKey]}
+
+              >
+                {/*<div className="" style={{width:"100%",background:"red"}}>22222</div>*/}
+
                 {columns.map((data: any, i) => {
                   return (
                     <div
@@ -323,6 +340,7 @@ export const Table: FC<any> = (props) => {
                       key={i}
                       style={{
                         ...hideFunBody(data, layer, "body"),
+                        ...(dataItem.background && (layer === main || layer === left) ? {background: dataItem.background} : (isEvenOrOdd(t) ? {} : {background: "#F7F8FA"}))
                       }}
                     >
                       <div
@@ -371,13 +389,14 @@ export const Table: FC<any> = (props) => {
           ...(layer === leftBackground ? {pointerEvents: "none"} : {}),
 
         }}
-        onScroll={onScroll ? (e: any) => {
+        onScroll={onScroll ? throttle((e)=>{
           onScroll(e.target.scrollLeft)
-        } : () => {
+          // console.log(3333,e)
+        },10) : () => {
         }}
       >
         <HeadDom layer={layer} setDataSource={setDataSource} setSortObj={setSortObj} sortObj={sortObj}/>
-        {layer === head || layer === headLeft ? null : <BodyDom layer={layer} dataSource={dataSource}/>}
+        {layer === head || layer === headLeft || layer === leftBackground? null : <BodyDom layer={layer} dataSource={dataSource}/>}
       </div>
     )
 
