@@ -161,6 +161,12 @@ describe('Calendar', () => {
     expect(document.getElementsByClassName('custom-cell').length).toBe(31)
   })
 
+  test('title hidden', () => {
+    render(<CalendarPickerView title={false} />)
+
+    expect(document.querySelector(`.${classPrefix}-header`)).toBeNull()
+  })
+
   test('not fill empty cells if unnecessary', () => {
     const { container } = render(
       <CalendarPickerView
@@ -169,8 +175,6 @@ describe('Calendar', () => {
       />
     )
 
-    expect(
-      container.querySelectorAll('.adm-calendar-picker-view-cell')
-    ).toHaveLength(30)
+    expect(container.querySelectorAll(`.${classPrefix}-cell`)).toHaveLength(30)
   })
 })
