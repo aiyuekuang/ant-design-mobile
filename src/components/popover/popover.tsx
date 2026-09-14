@@ -1,40 +1,41 @@
+import {
+  arrow,
+  autoUpdate,
+  computePosition,
+  flip,
+  hide,
+  limitShift,
+  offset,
+  shift,
+} from '@floating-ui/dom'
+import { useClickAway, useIsomorphicLayoutEffect } from 'ahooks'
+import classNames from 'classnames'
+import type { ReactElement, ReactNode } from 'react'
 import React, {
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
-  useEffect,
 } from 'react'
-import type { ReactNode, ReactElement } from 'react'
-import classNames from 'classnames'
+import { convertPx } from '../../utils/convert-px'
+import { NativeProps, withNativeProps } from '../../utils/native-props'
+import {
+  GetContainer,
+  renderToContainer,
+} from '../../utils/render-to-container'
+import { useShouldRender } from '../../utils/should-render'
 import { usePropsValue } from '../../utils/use-props-value'
 import { mergeProps } from '../../utils/with-default-props'
-import { NativeProps, withNativeProps } from '../../utils/native-props'
 import {
   PropagationEvent,
   withStopPropagation,
 } from '../../utils/with-stop-propagation'
 import { Arrow } from './arrow'
-import {
-  GetContainer,
-  renderToContainer,
-} from '../../utils/render-to-container'
-import {
-  arrow,
-  computePosition,
-  flip,
-  offset,
-  autoUpdate,
-  hide,
-  shift,
-  limitShift,
-} from '@floating-ui/dom'
-import { Wrapper } from './wrapper'
-import { useShouldRender } from '../../utils/should-render'
-import { useClickAway, useIsomorphicLayoutEffect } from 'ahooks'
 import { DeprecatedPlacement, Placement } from './index'
 import { normalizePlacement } from './normalize-placement'
-import { convertPx } from '../../utils/convert-px'
+import { useShowingGuard } from './use-showing-guard'
+import { Wrapper, type WrapperRef } from './wrapper'
 
 const classPrefix = `adm-popover`
 
@@ -76,17 +77,23 @@ export const Popover = forwardRef<PopoverRef, PopoverProps>((p, ref) => {
     onChange: props.onVisibleChange,
   })
 
+  const { markShowing, isShowing } = useShowingGuard()
+
   useImperativeHandle(
     ref,
     () => ({
-      show: () => setVisible(true),
+      show: () => {
+        // 标记进入 show() 触发链，避免同一次点击事件冒泡到 document 时被 useClickAway 立即关闭
+        markShowing()
+        setVisible(true)
+      },
       hide: () => setVisible(false),
       visible,
     }),
     [visible]
   )
 
-  const targetRef = useRef<Wrapper>(null)
+  const targetRef = useRef<WrapperRef>(null)
   const floatingRef = useRef<HTMLDivElement>(null)
   const arrowRef = useRef<HTMLDivElement>(null)
 
@@ -187,15 +194,16 @@ export const Popover = forwardRef<PopoverRef, PopoverProps>((p, ref) => {
 
   useEffect(() => {
     const floatingElement = floatingRef.current
-    if (!targetElement || !floatingElement) return
+    if (!targetElement || !floatingElement || !visible) return
     return autoUpdate(targetElement, floatingElement, update, {
       elementResize: typeof ResizeObserver !== 'undefined',
     })
-  }, [targetElement])
+  }, [targetElement, visible])
 
   useClickAway(
     () => {
       if (!props.trigger) return
+      if (isShowing()) return // 跳过 show() 触发链上的 click-away
       setVisible(false)
     },
     [() => targetRef.current?.element, floatingRef],

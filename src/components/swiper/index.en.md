@@ -38,6 +38,8 @@ Use `total` with `renderProps` for render. Not support `loop`
 
 <code src="./demos/demo8.tsx"></code>
 
+<code src="./demos/demo9.tsx" debug></code>
+
 <code src="./demos/demo6.tsx" debug></code>
 
 <code src="./demos/demo7.tsx" debug></code>
@@ -56,7 +58,7 @@ Use `total` with `renderProps` for render. Not support `loop`
 | indicator | Render a customized indicator | `(total: number, current: number) => ReactNode` | - |
 | indicatorProps | Related attributes of the indicator | support [PageIndicator](/components/page-indicator) `color` `style` `className` prop | - |
 | loop | Whether to loop | `boolean` | `false` |
-| onIndexChange | Triggered on index is changed | `(index: number) => void` | - |
+| onIndexChange | Triggered on index is changed | `(index: number, info: { source: SwiperIndexChangeSource }) => void` | - |
 | rubberband | Whether to enable the rubberband effect. | `boolean` | `true` |
 | slideSize | The slide width in percentage | `number` | `100` |
 | stuckAtBoundary | Whether to stuck at boundary in order to prevent white spaces. Only available when `loop` is `false` and `slideWidth` < 100. | `boolean` | `true` |
@@ -66,6 +68,10 @@ Use `total` with `renderProps` for render. Not support `loop`
 
 ```ts
 type PropagationEvent = 'mouseup' | 'mousemove' | 'mousedown'
+```
+
+```ts
+type SwiperIndexChangeSource = 'auto' | 'swipe' | 'resize'
 ```
 
 ### CSS Variables

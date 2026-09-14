@@ -271,7 +271,108 @@ describe('Form', () => {
     })
   })
 
+  test('validateFields with validateOnly should not show error UI', async () => {
+    const onValidate = jest.fn()
+    const App = () => {
+      const [form] = Form.useForm()
+      const [submittable, setSubmittable] = React.useState(false)
+      const values = Form.useWatch([], form)
+
+      React.useEffect(() => {
+        let isCurrent = true
+        form
+          .validateFields({ validateOnly: true })
+          .then(() => {
+            if (isCurrent) {
+              setSubmittable(true)
+              onValidate(true)
+            }
+          })
+          .catch(() => {
+            if (isCurrent) {
+              setSubmittable(false)
+              onValidate(false)
+            }
+          })
+        return () => {
+          isCurrent = false
+        }
+      }, [form, values])
+
+      return (
+        <Form form={form} data-testid='form'>
+          <Form.Item
+            name='name'
+            label='Name'
+            rules={[{ required: true, message: 'Name is required' }]}
+          >
+            <Input placeholder='Please enter name' />
+          </Form.Item>
+          <button
+            type='button'
+            disabled={!submittable}
+            data-testid='submit-btn'
+          >
+            Submit
+          </button>
+        </Form>
+      )
+    }
+
+    const { getByTestId, getByLabelText } = render(<App />)
+
+    // Initially form is empty, validateOnly should reject and button should be disabled
+    await waitFor(() => {
+      expect(onValidate).toHaveBeenLastCalledWith(false)
+    })
+    expect(getByTestId('submit-btn')).toBeDisabled()
+
+    // validateOnly should not trigger error UI on its own
+    // (errors only show after user interaction via onChange validateTrigger)
+    expect($$(`.${classPrefix}-item-feedback-error`).length).toBe(0)
+    expect($$(`.${classPrefix}-item-has-error`).length).toBe(0)
+
+    // Fill in the required field
+    fireEvent.change(getByLabelText(/name/i), { target: { value: 'test' } })
+
+    // Validation should pass and button should be enabled
+    await waitFor(() => {
+      expect(onValidate).toHaveBeenLastCalledWith(true)
+    })
+    expect(getByTestId('submit-btn')).not.toBeDisabled()
+  })
+
   describe('Form.Item', () => {
+    test('supports a single child wrapped in an array', async () => {
+      const onFinish = jest.fn()
+      const { container, getByText } = render(
+        <Form
+          initialValues={{ name: 'bamboo' }}
+          onFinish={onFinish}
+          footer={
+            <Button block type='submit'>
+              submit
+            </Button>
+          }
+        >
+          <Form.Item name='name' label='Name'>
+            {[<Input key='input' />]}
+          </Form.Item>
+        </Form>
+      )
+
+      const input = container.querySelector('input') as HTMLInputElement
+      expect(input.value).toBe('bamboo')
+
+      fireEvent.change(input, { target: { value: 'little' } })
+      fireEvent.click(getByText('submit'))
+
+      await waitFor(() => {
+        expect(onFinish).toHaveBeenCalled()
+      })
+      expect(onFinish.mock.calls[0][0]).toEqual({ name: 'little' })
+    })
+
     test('noStyle', async () => {
       const onChange = jest.fn()
       const { container } = render(

@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react'
-import { render, testA11y, fireEvent, screen, mockDrag } from 'testing'
-import Swiper, { SwiperRef } from '..'
 import { act } from '@testing-library/react'
+import React, { useRef, useState } from 'react'
+import { fireEvent, mockDrag, render, screen, testA11y } from 'testing'
+import Swiper, { SwiperRef } from '..'
+import { getSwipeToPosition } from '../swiper'
 
 const classPrefix = `adm-swiper`
 
@@ -176,7 +177,7 @@ describe('Swiper', () => {
     expect($$(`.${classPrefix}-track-inner`)[0]).toHaveStyle('transform: none')
   })
 
-  test('`onIndexChange` should be called when use `swipeTo`', () => {
+  test('`onIndexChange` source should be `swipe` when use `swipeTo`', () => {
     const onIndexChange = jest.fn()
     const App = () => {
       const ref = useRef<SwiperRef>(null)
@@ -198,7 +199,83 @@ describe('Swiper', () => {
     const { getByText } = render(<App />)
 
     fireEvent.click(getByText('to'))
-    expect(onIndexChange).toBeCalledWith(2)
+    expect(onIndexChange).toBeCalledWith(2, { source: 'swipe' })
+  })
+
+  test('`onIndexChange` source should be `auto` when autoplay', () => {
+    jest.useFakeTimers()
+    const onIndexChange = jest.fn()
+    render(
+      <Swiper autoplay onIndexChange={onIndexChange}>
+        {items}
+      </Swiper>
+    )
+
+    act(() => {
+      jest.runOnlyPendingTimers()
+    })
+
+    expect(onIndexChange).toBeCalledWith(1, { source: 'auto' })
+    jest.useRealTimers()
+  })
+
+  test('`onIndexChange` source should be `swipe` when use `swipeNext` and `swipePrev`', () => {
+    const onIndexChange = jest.fn()
+    const App = () => {
+      const ref = useRef<SwiperRef>(null)
+      return (
+        <>
+          <Swiper defaultIndex={1} ref={ref} onIndexChange={onIndexChange}>
+            {items}
+          </Swiper>
+          <button
+            onClick={() => {
+              ref.current?.swipeNext()
+            }}
+          >
+            next
+          </button>
+          <button
+            onClick={() => {
+              ref.current?.swipePrev()
+            }}
+          >
+            prev
+          </button>
+        </>
+      )
+    }
+    const { getByText } = render(<App />)
+
+    fireEvent.click(getByText('next'))
+    expect(onIndexChange).toBeCalledWith(2, { source: 'swipe' })
+
+    onIndexChange.mockClear()
+
+    fireEvent.click(getByText('prev'))
+    expect(onIndexChange).toBeCalledWith(1, { source: 'swipe' })
+  })
+
+  test('`onIndexChange` source should be `resize` when current index out of range', () => {
+    const onIndexChange = jest.fn()
+    const App = () => {
+      const [list, setList] = useState(['1', '2', '3'])
+      return (
+        <>
+          <Swiper defaultIndex={2} onIndexChange={onIndexChange}>
+            {list.map(item => (
+              <Swiper.Item key={item}>{item}</Swiper.Item>
+            ))}
+          </Swiper>
+          <button onClick={() => setList(['1', '2'])}>shrink</button>
+        </>
+      )
+    }
+
+    const { getByText } = render(<App />)
+
+    fireEvent.click(getByText('shrink'))
+    expect(onIndexChange).toBeCalledWith(1, { source: 'resize' })
   })
 
   test('`onIndexChange` should not be called when use `swipeTo` equal value', () => {
@@ -379,5 +456,131 @@ describe('Swiper', () => {
     )
 
     expect(container).toMatchSnapshot()
+  })
+
+  test('loop with small slideSize should show correct number of slides', () => {
+    const sixItems = [1, 2, 3, 4, 5, 6].map(item => (
+      <Swiper.Item key={item}>
+        <div>{item}</div>
+      </Swiper.Item>
+    ))
+
+    render(
+      <Swiper slideSize={20} loop stuckAtBoundary={false}>
+        {sixItems}
+      </Swiper>
+    )
+
+    const slides = $$(`.${classPrefix}-slide`)
+    expect(slides.length).toBe(6)
+
+    const visibleCount = Array.from(slides).filter(slide => {
+      const style = slide.getAttribute('style') || ''
+      if (style.includes('transform: none')) return true
+      const match = style.match(/translate3d\((-?\d+(?:\.\d+)?)%/)
+      if (!match) return false
+      const pos = parseFloat(match[1])
+      const actualPos = (pos * 20) / 100
+      return actualPos >= 0 && actualPos < 100
+    }).length
+
+    expect(visibleCount).toBe(5)
+  })
+
+  test('loop with small slideSize and trackOffset should show correct slides', () => {
+    const sixItems = [1, 2, 3, 4, 5, 6].map(item => (
+      <Swiper.Item key={item}>
+        <div>{item}</div>
+      </Swiper.Item>
+    ))
+
+    render(
+      <Swiper slideSize={70} trackOffset={15} loop stuckAtBoundary={false}>
+        {sixItems}
+      </Swiper>
+    )
+
+    const slides = $$(`.${classPrefix}-slide`)
+    expect(slides.length).toBe(6)
+
+    const positions = Array.from(slides).map(slide => {
+      const style = slide.getAttribute('style') || ''
+      if (style.includes('transform: none')) return 0
+      const match = style.match(/translate3d\((-?\d+(?:\.\d+)?)%/)
+      return match ? parseFloat(match[1]) : null
+    })
+
+    const validPositions = positions.filter(p => p !== null)
+    // 确保所有 slides 都成功解析了位置，避免空通过
+    expect(validPositions.length).toBe(slides.length)
+    const uniquePositions = new Set(validPositions)
+    expect(uniquePositions.size).toBe(validPositions.length)
+  })
+
+  // Pure-function tests for the shortest-path algorithm in swipeTo loop mode.
+  describe('swipeTo shortest path logic', () => {
+    test('slide 0 → slide 2: backward 100 (position=-100)', () => {
+      expect(getSwipeToPosition(0, 2, 3)).toBe(-100)
+    })
+    test('slide 2 → slide 0: forward 100 (position=300)', () => {
+      expect(getSwipeToPosition(200, 0, 3)).toBe(300)
+    })
+    test('slide 0 → slide 1: forward 100', () => {
+      expect(getSwipeToPosition(0, 1, 3)).toBe(100)
+    })
+    test('slide 1 → slide 0: backward 100', () => {
+      expect(getSwipeToPosition(100, 0, 3)).toBe(0)
+    })
+    test('swipeTo(-1) from position 0: backward to -100', () => {
+      expect(getSwipeToPosition(0, -1, 3)).toBe(-100)
+    })
+    test('after onRest normalizes to 200, swipeTo(0): forward to 300', () => {
+      expect(getSwipeToPosition(200, 0, 3)).toBe(300)
+    })
+    test('even slides: delta exactly half → forward (tiebreak)', () => {
+      // 2 slides, totalWidth=200, half=100
+      // from position 0, targetIndex 1: delta = modulus(100, 200) = 100, not > 100
+      expect(getSwipeToPosition(0, 1, 2)).toBe(100)
+    })
+  })
+
+  test('should not remount items when reordering', () => {
+    const mountLog: any[] = []
+
+    const TestItem = ({ id }: { id: string }) => {
+      React.useEffect(() => {
+        mountLog.push(id)
+      }, [])
+      return <div data-testid={`item-${id}`}>Item {id}</div>
+    }
+
+    const TestApp = () => {
+      const [items, setItems] = React.useState(['a', 'b', 'c'])
+      return (
+        <>
+          <Swiper>
+            {items.map(id => (
+              <Swiper.Item key={id}>
+                <TestItem id={id} />
+              </Swiper.Item>
+            ))}
+          </Swiper>
+          <button
+            data-testid='change-order'
+            onClick={() => setItems(['c', 'a', 'b'])}
+          >
+            Change Order
+          </button>
+        </>
+      )
+    }
+
+    const { getByTestId } = render(<TestApp />)
+
+    expect(mountLog).toEqual(['a', 'b', 'c'])
+
+    fireEvent.click(getByTestId('change-order'))
+
+    expect(mountLog).toEqual(['a', 'b', 'c'])
   })
 })

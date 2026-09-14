@@ -1,5 +1,6 @@
 import { useClickAway } from 'ahooks'
 import classNames from 'classnames'
+import raf from 'rc-util/lib/raf'
 import type {
   ComponentProps,
   PropsWithChildren,
@@ -10,6 +11,7 @@ import React, {
   cloneElement,
   forwardRef,
   isValidElement,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -32,6 +34,7 @@ export type DropdownProps = {
   closeOnMaskClick?: boolean
   closeOnClickAway?: boolean
   onChange?: (key: string | null) => void
+  onVisibleChange?: (visible: boolean, info: { key: string | null }) => void
   arrowIcon?: ReactNode
   /**
    * @deprecated use `arrowIcon` instead
@@ -60,11 +63,15 @@ const Dropdown = forwardRef<DropdownRef, PropsWithChildren<DropdownProps>>(
       props.arrow,
       props.arrowIcon
     )
+
     const [value, setValue] = usePropsValue({
       value: mergedProps.activeKey,
       defaultValue: mergedProps.defaultActiveKey,
       onChange: mergedProps.onChange,
     })
+
+    const cacheKeyRef = useRef<string | null>(null)
+    cacheKeyRef.current = value ?? cacheKeyRef.current
 
     const navRef = useRef<HTMLDivElement>(null)
     const contentRef = useRef<HTMLDivElement>(null)
@@ -78,14 +85,38 @@ const Dropdown = forwardRef<DropdownRef, PropsWithChildren<DropdownProps>>(
     // 计算 navs 的 top 值
     const [top, setTop] = useState<number>()
     const containerRef = useRef<HTMLDivElement>(null)
-    useEffect(() => {
+    const rafIdRef = useRef<number>(0)
+
+    const updatePosition = useCallback(() => {
       const container = containerRef.current
       if (!container) return
-      if (value) {
-        const rect = container.getBoundingClientRect()
-        setTop(rect.bottom)
+      setTop(container.getBoundingClientRect().bottom)
+    }, [])
+
+    const updateTop = useCallback(() => {
+      raf.cancel(rafIdRef.current)
+
+      rafIdRef.current = raf(updatePosition)
+    }, [updatePosition])
+
+    useEffect(() => {
+      if (!value) return
+
+      updatePosition()
+
+      window.addEventListener('scroll', updateTop, {
+        passive: true,
+        capture: true,
+      })
+      window.addEventListener('resize', updateTop)
+
+      return () => {
+        raf.cancel(rafIdRef.current)
+
+        window.removeEventListener('scroll', updateTop, true)
+        window.removeEventListener('resize', updateTop)
       }
-    }, [value])
+    }, [value, updateTop, updatePosition])
 
     const changeActive = (key: string | null) => {
       if (value === key) {
@@ -154,6 +185,12 @@ const Dropdown = forwardRef<DropdownRef, PropsWithChildren<DropdownProps>>(
                 }
               : undefined
           }
+          afterShow={() => {
+            mergedProps.onVisibleChange?.(true, { key: cacheKeyRef.current })
+          }}
+          afterClose={() => {
+            mergedProps.onVisibleChange?.(false, { key: cacheKeyRef.current })
+          }}
         >
           <div ref={contentRef}>
             {items.map(item => {

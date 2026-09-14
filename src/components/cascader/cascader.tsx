@@ -1,24 +1,24 @@
 import React, {
-  useState,
-  useEffect,
   ReactNode,
   forwardRef,
+  useEffect,
   useImperativeHandle,
+  useState,
 } from 'react'
-import Popup, { PopupProps } from '../popup'
-import {
-  CascaderValue,
-  CascaderValueExtend,
-  CascaderOption,
-} from '../cascader-view'
-import { mergeProps } from '../../utils/with-default-props'
+import type { FieldNamesType } from '../../hooks'
+import { useFieldNames } from '../../hooks'
 import { NativeProps, withNativeProps } from '../../utils/native-props'
 import { usePropsValue } from '../../utils/use-props-value'
-import CascaderView from '../cascader-view'
-import { useConfig } from '../config-provider'
+import { mergeProps } from '../../utils/with-default-props'
+import CascaderView, {
+  CascaderOption,
+  CascaderValue,
+  CascaderValueExtend,
+  CascaderViewOptionRender,
+} from '../cascader-view'
 import { useCascaderValueExtend } from '../cascader-view/use-cascader-value-extend'
-import { useFieldNames } from '../../hooks'
-import type { FieldNamesType } from '../../hooks'
+import { useConfig } from '../config-provider'
+import Popup, { PopupProps } from '../popup'
 
 const classPrefix = `adm-cascader`
 
@@ -50,6 +50,7 @@ export type CascaderProps = {
   onTabsChange?: (index: number) => void
   activeIcon?: ReactNode
   fieldNames?: FieldNamesType
+  optionRender?: CascaderViewOptionRender
 } & Pick<
   PopupProps,
   | 'getContainer'
@@ -120,9 +121,7 @@ export const Cascader = forwardRef<CascaderRef, CascaderProps>((p, ref) => {
   const [innerValue, setInnerValue] = useState<CascaderValue[]>(value)
 
   useEffect(() => {
-    if (!visible) {
-      setInnerValue(value)
-    }
+    setInnerValue(value)
   }, [visible, value])
 
   const cascaderElement = withNativeProps(
@@ -166,6 +165,7 @@ export const Cascader = forwardRef<CascaderRef, CascaderProps>((p, ref) => {
 
   const popupElement = (
     <Popup
+      className={`${classPrefix}-popup`}
       visible={visible}
       position='bottom'
       onMaskClick={() => {

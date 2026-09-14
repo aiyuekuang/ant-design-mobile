@@ -1,31 +1,33 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  forwardRef,
-  useImperativeHandle,
-} from 'react'
-import type { ReactElement } from 'react'
-import { mergeProps } from '../../utils/with-default-props'
-import { NativeProps, withNativeProps } from '../../utils/native-props'
-import type { NumberKeyboardProps } from '../number-keyboard'
 import classNames from 'classnames'
+import type { ReactElement } from 'react'
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 import { bound } from '../../utils/bound'
+import { NativeProps, withNativeProps } from '../../utils/native-props'
 import { usePropsValue } from '../../utils/use-props-value'
+import { mergeProps } from '../../utils/with-default-props'
 import { useConfig } from '../config-provider'
+import type { NumberKeyboardProps } from '../number-keyboard'
 
 export type PasscodeInputProps = {
   value?: string
   defaultValue?: string
-  onChange?: (val: string) => void
   length?: number
   plain?: boolean
   error?: boolean
   caret?: boolean
   seperated?: boolean
+  keyboard?: ReactElement<NumberKeyboardProps>
+  inputMode?: 'numeric' | 'text'
+  direction?: 'ltr' | 'rtl'
   onBlur?: () => void
   onFocus?: () => void
-  keyboard?: ReactElement<NumberKeyboardProps>
+  onChange?: (val: string) => void
   onFill?: (val: string) => void
 } & NativeProps<
   | '--cell-gap'
@@ -49,6 +51,8 @@ const defaultProps = {
   error: false,
   seperated: false,
   caret: true,
+  inputMode: 'numeric',
+  direction: 'ltr',
 }
 
 export const PasscodeInput = forwardRef<PasscodeInputRef, PasscodeInputProps>(
@@ -108,11 +112,13 @@ export const PasscodeInput = forwardRef<PasscodeInputRef, PasscodeInputProps>(
       },
     }))
 
+    const isRTL = props.direction === 'rtl'
+
     const renderCells = () => {
       const cells: ReactElement[] = []
 
       const chars = value.split('')
-      const caretIndex = chars.length // 光标位置index等于当前文字长度
+      const caretIndex = chars.length
       const focusedIndex = bound(chars.length, 0, cellLength - 1)
 
       for (let i = 0; i < cellLength; i++) {
@@ -137,6 +143,7 @@ export const PasscodeInput = forwardRef<PasscodeInputRef, PasscodeInputProps>(
       [`${classPrefix}-focused`]: focused,
       [`${classPrefix}-error`]: props.error,
       [`${classPrefix}-seperated`]: props.seperated,
+      [`${classPrefix}-rtl`]: isRTL,
     })
 
     return (
@@ -161,7 +168,7 @@ export const PasscodeInput = forwardRef<PasscodeInputRef, PasscodeInputProps>(
               value={value}
               type='text'
               pattern='[0-9]*'
-              inputMode='numeric'
+              inputMode={props.inputMode}
               onChange={e => {
                 setValue(e.target.value.slice(0, props.length))
               }}

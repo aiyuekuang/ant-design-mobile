@@ -16,6 +16,7 @@ const msMY = mergeLocale(base, {
     'confirm': 'Ok',
     'start': 'Mula',
     'end': 'Tamat',
+    'startAndEnd': 'Mula/Tamat',
     'today': 'Hari ini',
     'markItems': ['Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam', 'Hari'],
     'yearAndMonth': 'Tahun${year} bulan ${month}',
@@ -102,6 +103,9 @@ const msMY = mergeLocale(base, {
   'Input': { 'clear': 'Bersihkan' },
   'Mask': { 'name': 'lapisan topeng latar belakang' },
   'Modal': { 'ok': 'Faham' },
+  'NumberKeyboard': {
+    'backspace': 'Padam',
+  },
   'PasscodeInput': { 'name': 'Kotak input kata laluan' },
   'PullToRefresh': {
     'pulling': 'Tarik ke bawah untuk muat semula',

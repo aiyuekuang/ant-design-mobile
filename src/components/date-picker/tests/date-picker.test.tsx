@@ -1,17 +1,22 @@
+import dayjs from 'dayjs'
+import * as React from 'react'
 import {
-  render,
-  testA11y,
+  act,
   fireEvent,
-  waitFor,
+  render,
   screen,
   sleep,
-  act,
+  testA11y,
+  waitFor,
   waitForElementToBeRemoved,
 } from 'testing'
-import * as React from 'react'
 import DatePicker from '../'
-import dayjs from 'dayjs'
+import { generateDatePickerColumns as generateDatePickerDateColumns } from '../date-picker-date-utils'
 import Button from '../../button'
+import {
+  convertStringArrayToDate,
+  generateDatePickerColumns,
+} from '../date-picker-week-utils'
 
 const classPrefix = `adm-picker`
 
@@ -132,6 +137,29 @@ describe('DatePicker', () => {
     expect(fn.mock.calls[0][0]).toEqual(today.toDateString())
   })
 
+  test('precision quarter', async () => {
+    const today = new Date()
+    const fn = jest.fn()
+    const { getByText } = render(
+      <DatePicker
+        visible
+        precision='quarter'
+        value={now}
+        onConfirm={val => {
+          fn(val.toDateString())
+        }}
+      />
+    )
+
+    expect(
+      document.body.querySelectorAll(`.${classPrefix}-view-column`).length
+    ).toBe(2)
+    await waitFor(() => {
+      fireEvent.click(getByText('确定'))
+    })
+    expect(fn.mock.calls[0][0]).toEqual(today.toDateString())
+  })
+
   test('test imperative call', async () => {
     const today = new Date()
     const fn = jest.fn()
@@ -181,5 +209,119 @@ describe('DatePicker', () => {
     const res = fn.mock.calls[0][0]
     expect(res.toDateString()).toEqual(now.toDateString())
     expect(res.tillNow).toBeTruthy()
+  })
+
+  describe('convertStringArrayToDate of week should correct', () => {
+    it('2024-1-1 -> 2024-01-01', () => {
+      // jest mock today is `2024-12-30`
+      jest.useFakeTimers({
+        now: new Date('2024-12-30'),
+      })
+
+      const date = convertStringArrayToDate(['2024', '1', '1'])
+      expect(date.getFullYear()).toBe(2024)
+      expect(date.getMonth()).toBe(0)
+      expect(date.getDate()).toBe(1)
+    })
+
+    it('2023-1-1 -> 2023-01-02', () => {
+      const date = convertStringArrayToDate(['2023', '1', '1'])
+      expect(date.getFullYear()).toBe(2023)
+      expect(date.getMonth()).toBe(0)
+      expect(date.getDate()).toBe(2)
+    })
+
+    it('2020-1-1 -> 2019-12-30', () => {
+      const date = convertStringArrayToDate(['2020', '1', '1'])
+      expect(date.getFullYear()).toBe(2019)
+      expect(date.getMonth()).toBe(11)
+      expect(date.getDate()).toBe(30)
+    })
+
+    it('2023-27-1 -> 2023-07-03', () => {
+      const date = convertStringArrayToDate(['2023', '27', '1'])
+      expect(date.getFullYear()).toBe(2023)
+      expect(date.getMonth()).toBe(6)
+      expect(date.getDate()).toBe(3)
+    })
+  })
+
+  describe('generateDatePickerColumns for week precision', () => {
+    it('should use isoWeekYear when max date is in first week of next year', () => {
+      // 2025-12-29 is in ISO week 1 of 2026
+      const min = new Date('2020-01-01')
+      const max = new Date('2025-12-29')
+      const columns = generateDatePickerColumns(
+        ['2026', '1', '1'],
+        min,
+        max,
+        'week',
+        (type, data) => type + '：' + data,
+        undefined
+      )
+
+      // The year column should include 2026 (isoWeekYear of 2025-12-29)
+      const yearColumn = columns[0] as { label: string; value: string }[]
+      const yearValues = yearColumn.map(item => item.value)
+      expect(yearValues).toContain('2026')
+
+      // The week column for year 2026 should start from week 1
+      const weekColumn = columns[1] as { label: string; value: string }[]
+      const weekValues = weekColumn.map(item => item.value)
+      expect(weekValues).toEqual(['1'])
+    })
+  })
+
+  describe('generateDatePickerColumns for day precision', () => {
+    it('should include every day in December 1981', () => {
+      const originalTZ = process.env.TZ
+      // Asia/Singapore has a historical transition in December 1981 that
+      // makes dayjs().daysInMonth() report one day for this month.
+      process.env.TZ = 'Asia/Singapore'
+
+      try {
+        const columns = generateDatePickerDateColumns(
+          ['1981', '12', '1'],
+          new Date(1981, 0, 1),
+          new Date(1982, 0, 31),
+          'day',
+          (type, data) => type + '：' + data,
+          undefined
+        )
+
+        const dayColumn = columns[2] as { value: string }[]
+        expect(dayColumn.map(item => item.value)).toEqual(
+          Array.from({ length: 31 }, (_, index) => `${index + 1}`)
+        )
+      } finally {
+        if (originalTZ === undefined) {
+          delete process.env.TZ
+        } else {
+          process.env.TZ = originalTZ
+        }
+      }
+    })
+  })
+
+  test('renderLabel should be work', async () => {
+    const labelRenderer = (
+      type: string,
+      data: number,
+      info: { selected: boolean }
+    ) => {
+      if (info.selected) {
+        return `${type}-selected`
+      }
+      return data.toString()
+    }
+
+    render(<DatePicker visible renderLabel={labelRenderer} />)
+
+    const yearEl = await screen.findByText('year-selected')
+    expect(yearEl).toBeInTheDocument()
+    const monthEl = await screen.findByText('month-selected')
+    expect(monthEl).toBeInTheDocument()
+    const dayEl = await screen.findByText('day-selected')
+    expect(dayEl).toBeInTheDocument()
   })
 })

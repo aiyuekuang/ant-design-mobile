@@ -16,6 +16,7 @@ const inID = mergeLocale(base, {
     confirm: 'OK',
     start: 'Mulai',
     end: 'Selesai',
+    startAndEnd: 'Mulai/Selesai',
     today: 'Hari Ini',
     markItems: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
     yearAndMonth: '${year} Tahun ${month} Bulan',
@@ -99,6 +100,9 @@ const inID = mergeLocale(base, {
   Input: { clear: 'Hapus' },
   Mask: { name: 'lapisan pelindung' },
   Modal: { ok: 'Saya mendapatkannya' },
+  NumberKeyboard: {
+    backspace: 'Hapus',
+  },
   PasscodeInput: { name: 'Kotak kata sandi' },
   PullToRefresh: {
     pulling: 'Tarik ke bawah untuk menyegarkan',

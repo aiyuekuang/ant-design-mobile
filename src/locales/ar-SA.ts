@@ -16,6 +16,7 @@ const arSA = mergeLocale(base, {
     'confirm': 'تأكيد',
     'start': 'يبدأ',
     'end': 'ينهي',
+    'startAndEnd': 'يبدأ/ينهي',
     'today': 'اليوم',
     'markItems': ['واحد', 'اثنين', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'يوم'],
     'yearAndMonth': '${year} سنة ${month} شهر',
@@ -96,6 +97,9 @@ const arSA = mergeLocale(base, {
   'Input': { 'clear': 'إزالة' },
   'Mask': { 'name': 'قناع الخلفية' },
   'Modal': { 'ok': 'فهمت' },
+  'NumberKeyboard': {
+    'backspace': 'حذف',
+  },
   'PasscodeInput': { 'name': 'مربع إدخال كلمة المرور' },
   'PullToRefresh': {
     'pulling': 'اسحب إلى الأسفل للتحديث',

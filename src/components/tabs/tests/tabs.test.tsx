@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { render, testA11y, fireEvent } from 'testing'
+import { fireEvent, render, testA11y } from 'testing'
 import Tabs, { TabsProps } from '..'
 
 const classPrefix = `adm-tabs`
@@ -124,5 +124,78 @@ describe('Tabs', () => {
       </Tabs>
     )
     expect(container).toMatchSnapshot()
+  })
+
+  test('tabs should be focusable and keyboard-navigable', async () => {
+    const { getByText } = render(<Basic />)
+
+    const fruitsTab = getByText('fruits')
+    const vegetablesTab = getByText('vegetables')
+    const animalsTab = getByText('animals')
+
+    expect(fruitsTab).toHaveAttribute('tabIndex', '0')
+    expect(vegetablesTab).toHaveAttribute('tabIndex', '-1')
+    expect(animalsTab).toHaveAttribute('tabIndex', '-1')
+
+    fruitsTab.focus()
+    expect(fruitsTab).toHaveFocus()
+
+    fireEvent.keyDown(fruitsTab, { key: 'ArrowRight' })
+    expect(vegetablesTab).toHaveFocus()
+    expect(vegetablesTab).toHaveClass(`${classPrefix}-tab-active`)
+    expect(fruitsTab).toHaveAttribute('tabIndex', '-1')
+    expect(vegetablesTab).toHaveAttribute('tabIndex', '0')
+
+    fireEvent.keyDown(vegetablesTab, { key: 'ArrowRight' })
+    expect(animalsTab).toHaveFocus()
+    expect(animalsTab).toHaveClass(`${classPrefix}-tab-active`)
+
+    fireEvent.keyDown(animalsTab, { key: 'ArrowLeft' })
+    expect(vegetablesTab).toHaveFocus()
+    expect(vegetablesTab).toHaveClass(`${classPrefix}-tab-active`)
+  })
+
+  test('controlled activeKey: keyboard navigation should trigger focus, programmatic change should not', async () => {
+    const App = () => {
+      const [activeKey, setActiveKey] = useState('fruits')
+      return (
+        <div>
+          <Tabs activeKey={activeKey} onChange={setActiveKey}>
+            <Tabs.Tab title='fruits' key='fruits'>
+              Apple
+            </Tabs.Tab>
+            <Tabs.Tab title='vegetables' key='vegetables'>
+              Tomato
+            </Tabs.Tab>
+            <Tabs.Tab title='animals' key='animals'>
+              Ant
+            </Tabs.Tab>
+          </Tabs>
+          <button onClick={() => setActiveKey('animals')}>
+            Set to animals
+          </button>
+        </div>
+      )
+    }
+
+    const { getByText } = render(<App />)
+
+    const fruitsTab = getByText('fruits')
+    const vegetablesTab = getByText('vegetables')
+    const animalsTab = getByText('animals')
+    const button = getByText('Set to animals')
+
+    // First: keyboard navigation should trigger focus
+    fruitsTab.focus()
+    expect(fruitsTab).toHaveFocus()
+
+    fireEvent.keyDown(fruitsTab, { key: 'ArrowRight' })
+    expect(vegetablesTab).toHaveClass(`${classPrefix}-tab-active`)
+    expect(vegetablesTab).toHaveFocus() // 键盘切换应该触发 focus
+
+    // Second: programmatic activeKey change should NOT trigger focus
+    fireEvent.click(button)
+    expect(animalsTab).toHaveClass(`${classPrefix}-tab-active`)
+    expect(animalsTab).not.toHaveFocus() // 直接改 activeKey 不应该触发 focus
   })
 })

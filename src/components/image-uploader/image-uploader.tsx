@@ -1,22 +1,22 @@
-import React, { forwardRef, useRef, useState, useImperativeHandle } from 'react'
-import type {
-  ReactNode,
-  InputHTMLAttributes,
-  CSSProperties,
-  ReactElement,
-} from 'react'
+import { useIsomorphicLayoutEffect, useSize, useUnmount } from 'ahooks'
 import { AddOutline, CloseOutline } from 'antd-mobile-icons'
-import { mergeProps } from '../../utils/with-default-props'
-import ImageViewer, { ImageViewerShowHandler } from '../image-viewer'
-import PreviewItem from './preview-item'
-import { usePropsValue } from '../../utils/use-props-value'
-import { useIsomorphicLayoutEffect, useUnmount, useSize } from 'ahooks'
-import Space from '../space'
-import { NativeProps, withNativeProps } from '../../utils/native-props'
+import type {
+  CSSProperties,
+  InputHTMLAttributes,
+  ReactElement,
+  ReactNode,
+} from 'react'
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { measureCSSLength } from '../../utils/measure-css-length'
+import { NativeProps, withNativeProps } from '../../utils/native-props'
+import { usePropsValue } from '../../utils/use-props-value'
+import { mergeProps } from '../../utils/with-default-props'
 import { useConfig } from '../config-provider'
-import type { ImageProps } from '../image'
 import Grid, { GridProps } from '../grid'
+import type { ImageProps } from '../image'
+import ImageViewer, { ImageViewerShowHandler } from '../image-viewer'
+import Space from '../space'
+import PreviewItem from './preview-item'
 
 export type TaskStatus = 'pending' | 'fail' | 'success'
 
@@ -157,6 +157,7 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
         ? tasks
         : tasks.filter(task => task.status !== 'fail')
     }
+    const finalTasks = getFinalTasks(tasks)
 
     async function onChange(e: React.ChangeEvent<HTMLInputElement>) {
       e.persist()
@@ -178,7 +179,8 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
       }
 
       if (maxCount > 0) {
-        const exceed = value.length + files.length - maxCount
+        const exceed =
+          value.length + files.length + finalTasks.length - maxCount
         if (exceed > 0) {
           files = files.slice(0, files.length - exceed)
           props.onCountExceed?.(exceed)
@@ -191,7 +193,7 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
             id: idCountRef.current++,
             status: 'pending',
             file,
-          } as Task)
+          }) as Task
       )
 
       setTasks(prev => [...getFinalTasks(prev), ...newTasks])
@@ -225,11 +227,11 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
                 return task
               })
             })
-            throw e
+            console.error(e)
           }
         })
-      ).catch(error => console.error(error))
-      setValue(prev => prev.concat(newVal))
+      )
+      setValue(prev => prev.concat(newVal).filter(Boolean))
     }
 
     const imageViewerHandlerRef = useRef<ImageViewerShowHandler | null>(null)
@@ -247,8 +249,6 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
     useUnmount(() => {
       imageViewerHandlerRef.current?.close()
     })
-
-    const finalTasks = getFinalTasks(tasks)
 
     const showUpload =
       props.showUpload &&
@@ -318,6 +318,7 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
           )}
           {!props.disableUpload && (
             <input
+              aria-label={locale.ImageUploader.upload}
               ref={inputRef}
               capture={props.capture}
               accept={props.accept}
@@ -325,7 +326,6 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
               type='file'
               className={`${classPrefix}-input`}
               onChange={onChange}
-              aria-hidden
             />
           )}
         </div>

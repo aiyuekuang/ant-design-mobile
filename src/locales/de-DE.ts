@@ -16,6 +16,7 @@ const deDE = mergeLocale(base, {
     'confirm': 'Bestätigen',
     'start': 'Starten',
     'end': 'Beenden',
+    'startAndEnd': 'Starten/Beenden',
     'today': 'Heute',
     'markItems': ['I', 'II', 'III', 'IV', 'V', 'Sechs', 'Tag'],
     'yearAndMonth': '${year}Jahr${month}Monat',
@@ -101,6 +102,9 @@ const deDE = mergeLocale(base, {
   'Input': { 'clear': 'Löschen' },
   'Mask': { 'name': 'Hintergrundmaske' },
   'Modal': { 'ok': 'Ich weiß.' },
+  'NumberKeyboard': {
+    'backspace': 'Löschen',
+  },
   'PasscodeInput': { 'name': 'Passwort-Eingabefeld' },
   'PullToRefresh': {
     'pulling': 'Nach unten zum Aktualisieren ziehen',

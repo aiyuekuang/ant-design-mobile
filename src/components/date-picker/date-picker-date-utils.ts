@@ -1,15 +1,7 @@
-import dayjs from 'dayjs'
-import isoWeek from 'dayjs/plugin/isoWeek'
-import isoWeeksInYear from 'dayjs/plugin/isoWeeksInYear'
-import isLeapYear from 'dayjs/plugin/isLeapYear'
+import { RenderLabel } from '../date-picker-view/date-picker-view'
 import { PickerColumn } from '../picker'
 import type { DatePickerFilter } from './date-picker-utils'
 import { TILL_NOW } from './util'
-import { RenderLabel } from '../date-picker-view/date-picker-view'
-
-dayjs.extend(isoWeek)
-dayjs.extend(isoWeeksInYear)
-dayjs.extend(isLeapYear)
 
 export type DatePrecision =
   | 'year'
@@ -26,6 +18,10 @@ const precisionRankRecord: Record<DatePrecision, number> = {
   hour: 3,
   minute: 4,
   second: 5,
+}
+
+function getMonthDays(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate()
 }
 
 export function generateDatePickerColumns(
@@ -56,13 +52,11 @@ export function generateDatePickerColumns(
   const rank = precisionRankRecord[precision]
 
   const selectedYear = parseInt(selected[0])
-  const firstDayInSelectedMonth = dayjs(
-    convertStringArrayToDate([selected[0], selected[1], '1'])
-  )
   const selectedMonth = parseInt(selected[1])
   const selectedDay = parseInt(selected[2])
   const selectedHour = parseInt(selected[3])
   const selectedMinute = parseInt(selected[4])
+  const selectedSecond = parseInt(selected[5])
 
   const isInMinYear = selectedYear === minYear
   const isInMaxYear = selectedYear === maxYear
@@ -105,7 +99,7 @@ export function generateDatePickerColumns(
     const years = generateColumn(lower, upper, 'year')
     ret.push(
       years.map(v => ({
-        label: renderLabel('year', v),
+        label: renderLabel('year', v, { selected: selectedYear === v }),
         value: v.toString(),
       }))
     )
@@ -117,18 +111,20 @@ export function generateDatePickerColumns(
     const months = generateColumn(lower, upper, 'month')
     ret.push(
       months.map(v => ({
-        label: renderLabel('month', v),
+        label: renderLabel('month', v, { selected: selectedMonth === v }),
         value: v.toString(),
       }))
     )
   }
   if (rank >= precisionRankRecord.day) {
     const lower = isInMinMonth ? minDay : 1
-    const upper = isInMaxMonth ? maxDay : firstDayInSelectedMonth.daysInMonth()
+    const upper = isInMaxMonth
+      ? maxDay
+      : getMonthDays(selectedYear, selectedMonth)
     const days = generateColumn(lower, upper, 'day')
     ret.push(
       days.map(v => ({
-        label: renderLabel('day', v),
+        label: renderLabel('day', v, { selected: selectedDay === v }),
         value: v.toString(),
       }))
     )
@@ -139,7 +135,7 @@ export function generateDatePickerColumns(
     const hours = generateColumn(lower, upper, 'hour')
     ret.push(
       hours.map(v => ({
-        label: renderLabel('hour', v),
+        label: renderLabel('hour', v, { selected: selectedHour === v }),
         value: v.toString(),
       }))
     )
@@ -150,7 +146,7 @@ export function generateDatePickerColumns(
     const minutes = generateColumn(lower, upper, 'minute')
     ret.push(
       minutes.map(v => ({
-        label: renderLabel('minute', v),
+        label: renderLabel('minute', v, { selected: selectedMinute === v }),
         value: v.toString(),
       }))
     )
@@ -161,7 +157,7 @@ export function generateDatePickerColumns(
     const seconds = generateColumn(lower, upper, 'second')
     ret.push(
       seconds.map(v => ({
-        label: renderLabel('second', v),
+        label: renderLabel('second', v, { selected: selectedSecond === v }),
         value: v.toString(),
       }))
     )
@@ -170,7 +166,7 @@ export function generateDatePickerColumns(
   // Till Now
   if (tillNow) {
     ret[0].push({
-      label: renderLabel('now', null!),
+      label: renderLabel('now', null!, { selected: selected[0] === TILL_NOW }),
       value: TILL_NOW,
     })
 
@@ -199,7 +195,7 @@ export function convertDateToStringArray(
 }
 
 export function convertStringArrayToDate<
-  T extends string | number | null | undefined
+  T extends string | number | null | undefined,
 >(value: T[]): Date {
   const yearString = value[0] ?? '1900'
   const monthString = value[1] ?? '1'

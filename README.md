@@ -16,12 +16,12 @@
   <span> · </span>
     <a href="https://discord.gg/jmNvw4WFYn">Discord</a>
   <span> · </span>
-    <a href="https://mdn.alipayobjects.com/huamei_7uahnr/afts/img/A*8gmTR49Nr8UAAAAAAAAAAAAADrJ8AQ/original">钉钉</a>
+    <a href="https://mdn.alipayobjects.com/huamei_pdkywj/afts/img/A*nC08QYnlP68AAAAAAAAAAAAAesHxAQ/original">钉钉</a>
   </h4>
 </div>
 
 ```bash
-$ npm install --save antd-mobile
+$ npm install antd-mobile
 # or
 $ yarn add antd-mobile
 # or
@@ -39,11 +39,18 @@ You can also play with antd-mobile just in browser with [Codesandbox](https://co
 
 If you found bugs or would like to request some new features, please consider opening an [issue](https://github.com/ant-design/ant-design-mobile/issues/new).
 
-If you have some question about how to use ant-mobile, you can start a [discussion thread](https://github.com/ant-design/ant-design-mobile/discussions).
+If you have some questions about how to use ant-mobile, you can start a [discussion thread](https://github.com/ant-design/ant-design-mobile/discussions).
 
 ---
 
+
+## 🤝 Contributing 
+
 Thanks to all the contributors of antd-mobile:
+
+<a href="https://openomy.app/github/ant-design/ant-design-mobile" target="_blank" style="display: block; width: 100%;" align="center">
+  <img src="https://www.openomy.app/svg?repo=ant-design/ant-design-mobile&chart=bubble&latestMonth=3" target="_blank" alt="Contribution Leaderboard" style="display: block; width: 100%;" />
+</a>
 
 <a href="https://github.com/ant-design/ant-design-mobile/graphs/contributors">
   <img src="https://opencollective.com/ant-design-mobile/contributors.svg?width=960&button=false" alt="contributors" />

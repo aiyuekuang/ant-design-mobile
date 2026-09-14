@@ -1,14 +1,15 @@
+import { Dialog } from 'antd-mobile'
 import React, { useRef } from 'react'
 import {
+  act,
+  fireEvent,
+  mockDrag,
   render,
   testA11y,
-  fireEvent,
-  waitFor,
   userEvent,
-  mockDrag,
+  waitFor,
 } from 'testing'
 import SwipeAction, { Action, SwipeActionProps, SwipeActionRef } from '..'
-import { Dialog } from 'antd-mobile'
 
 const classPrefix = `adm-swipe-action`
 const width = 80
@@ -275,5 +276,42 @@ describe('SwipeAction', () => {
       expect(onActionsReveal).toBeCalledTimes(1)
       expect(onActionsReveal).toBeCalledWith('left')
     })
+  })
+
+  test('onClose should be called when the swipe action is closed', async () => {
+    const onClose = jest.fn()
+    const { getByTestId, getByText } = render(<App onClose={onClose} />)
+
+    swipe(getByTestId('swipe'), [
+      {
+        clientX: 150,
+      },
+    ])
+
+    await userEvent.click(getByText('pin'))
+    await waitFor(() => expect(onClose).toBeCalledTimes(1))
+  })
+
+  test('focus on action should open and focusout should close', async () => {
+    const onActionsReveal = jest.fn()
+    const { container } = render(<App onActionsReveal={onActionsReveal} />)
+
+    const rightButton = container.querySelector(
+      `.${classPrefix}-actions-right button`
+    ) as HTMLElement
+    act(() => {
+      rightButton.focus()
+    })
+
+    const track = container.querySelector(`.${classPrefix}-track`)!
+    await waitFor(() =>
+      expect(track).toHaveStyle(`transform: translate3d(-${width}px,0,0)`)
+    )
+    expect(onActionsReveal).toBeCalledWith('right')
+
+    const root = container.querySelector(`.${classPrefix}`)!
+    fireEvent.focusOut(root, { relatedTarget: document.body })
+
+    await waitFor(() => expect(track).toHaveStyle(`transform: none`))
   })
 })

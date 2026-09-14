@@ -1,3 +1,9 @@
+import { animated, useSpring } from '@react-spring/web'
+import { useDrag } from '@use-gesture/react'
+import { useGetState, useIsomorphicLayoutEffect } from 'ahooks'
+import classNames from 'classnames'
+import toArray from 'rc-util/lib/Children/toArray'
+import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import React, {
   forwardRef,
   useEffect,
@@ -6,20 +12,15 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import type { ReactNode, CSSProperties, ReactElement } from 'react'
-import { NativeProps, withNativeProps } from '../../utils/native-props'
-import { mergeProps } from '../../utils/with-default-props'
-import classNames from 'classnames'
-import { SwiperItem } from './swiper-item'
-import { devWarning } from '../../utils/dev-log'
-import { useSpring, animated } from '@react-spring/web'
-import { useDrag } from '@use-gesture/react'
-import PageIndicator, { PageIndicatorProps } from '../page-indicator'
 import { staged } from 'staged-components'
-import { useRefState } from '../../utils/use-ref-state'
 import { bound } from '../../utils/bound'
-import { useIsomorphicLayoutEffect, useGetState } from 'ahooks'
+import { devWarning } from '../../utils/dev-log'
+import { NativeProps, withNativeProps } from '../../utils/native-props'
+import { useRefState } from '../../utils/use-ref-state'
+import { mergeProps } from '../../utils/with-default-props'
 import { mergeFuncProps } from '../../utils/with-func-props'
+import PageIndicator, { PageIndicatorProps } from '../page-indicator'
+import { SwiperItem } from './swiper-item'
 
 const classPrefix = `adm-swiper`
 
@@ -41,6 +42,8 @@ export type SwiperRef = {
   swipePrev: () => void
 }
 
+export type SwiperIndexChangeSource = 'auto' | 'swipe' | 'resize'
+
 export type SwiperProps = {
   defaultIndex?: number
   allowTouchMove?: boolean
@@ -48,7 +51,10 @@ export type SwiperProps = {
   autoplayInterval?: number
   loop?: boolean
   direction?: 'horizontal' | 'vertical'
-  onIndexChange?: (index: number) => void
+  onIndexChange?: (
+    index: number,
+    info: { source: SwiperIndexChangeSource }
+  ) => void
   indicatorProps?: Pick<PageIndicatorProps, 'color' | 'style' | 'className'>
   indicator?: false | ((total: number, current: number) => ReactNode)
   slideSize?: number
@@ -92,7 +98,7 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
     const timeoutRef = useRef<number | null>(null)
     const isVertical = direction === 'vertical'
 
-    const slideRatio = props.slideSize / 100
+    const slideRatio = Math.max(props.slideSize, 1) / 100
     const offsetRatio = props.trackOffset / 100
 
     const { validChildren, count, renderChildren } = useMemo(() => {
@@ -105,17 +111,18 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
       if (typeof children === 'function') {
         renderChildren = children
       } else {
-        validChildren = React.Children.map(children, child => {
+        const childrenArray = toArray(children)
+        validChildren = childrenArray.filter(child => {
           if (!React.isValidElement(child)) return null
           if (child.type !== SwiperItem) {
             devWarning(
               'Swiper',
               'The children of `Swiper` must be `Swiper.Item` components.'
             )
-            return null
+            return false
           }
           count++
-          return child
+          return true
         })
       }
 
@@ -214,7 +221,7 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
             const index = Math.round(
               (offset + velocity * 2000 * direction) / slidePixels
             )
-            swipeTo(bound(index, minIndex, maxIndex))
+            swipeTo(bound(index, minIndex, maxIndex), 'swipe', false)
             window.setTimeout(() => {
               setDragging(false)
             })
@@ -254,34 +261,49 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
         }
       )
 
-      function swipeTo(index: number, immediate = false) {
+      function swipeTo(
+        index: number,
+        source: SwiperIndexChangeSource = 'swipe',
+        immediate = false
+      ) {
         const roundedIndex = Math.round(index)
         const targetIndex = loop
           ? modulus(roundedIndex, mergedTotal)
           : bound(roundedIndex, 0, mergedTotal - 1)
 
         if (targetIndex !== getCurrent()) {
-          props.onIndexChange?.(targetIndex)
+          props.onIndexChange?.(targetIndex, { source })
         }
 
         setCurrent(targetIndex)
 
-        api.start({
-          position: (loop ? roundedIndex : boundIndex(roundedIndex)) * 100,
-          immediate,
-        })
+        if (loop) {
+          api.start({
+            position: getSwipeToPosition(
+              position.get(),
+              roundedIndex,
+              mergedTotal,
+            ),
+            immediate,
+          })
+        } else {
+          api.start({
+            position: boundIndex(roundedIndex) * 100,
+            immediate,
+          })
+        }
       }
 
-      function swipeNext() {
-        swipeTo(Math.round(position.get() / 100) + 1)
+      function swipeNext(source: SwiperIndexChangeSource = 'swipe') {
+        swipeTo(Math.round(position.get() / 100) + 1, source, false)
       }
 
-      function swipePrev() {
-        swipeTo(Math.round(position.get() / 100) - 1)
+      function swipePrev(source: SwiperIndexChangeSource = 'swipe') {
+        swipeTo(Math.round(position.get() / 100) - 1, source, false)
       }
 
       useImperativeHandle(ref, () => ({
-        swipeTo,
+        swipeTo: index => swipeTo(index, 'swipe', false),
         swipeNext,
         swipePrev,
       }))
@@ -289,7 +311,7 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
       useIsomorphicLayoutEffect(() => {
         const maxIndex = mergedTotal - 1
         if (current > maxIndex) {
-          swipeTo(maxIndex, true)
+          swipeTo(maxIndex, 'resize', true)
         }
       })
 
@@ -298,9 +320,9 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
       const runTimeSwiper = () => {
         timeoutRef.current = window.setTimeout(() => {
           if (autoplay === 'reverse') {
-            swipePrev()
+            swipePrev('auto')
           } else {
-            swipeNext()
+            swipeNext('auto')
           }
           runTimeSwiper()
         }, autoplayInterval)
@@ -317,15 +339,24 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
 
       // ============================== Render ==============================
       // Render Item
-      function renderItem(index: number, child: React.ReactNode) {
+      function renderItem(
+        index: number,
+        child: React.ReactNode,
+        key?: React.Key
+      ) {
         let itemStyle: React.CSSProperties = {}
 
         if (loop) {
+          // 计算循环模式下定位所需的常量，避免在动画回调中重复计算
+          const totalWidth = mergedTotal * 100
+          const flagWidth = Math.min(
+            totalWidth / 2,
+            (offsetRatio / slideRatio + 1) * 100
+          )
+
           itemStyle = {
             [isVertical ? 'y' : 'x']: position.to(position => {
               let finalPosition = -position + index * 100
-              const totalWidth = mergedTotal * 100
-              const flagWidth = totalWidth / 2
               finalPosition =
                 modulus(finalPosition + flagWidth, totalWidth) - flagWidth
               return `${finalPosition}%`
@@ -340,14 +371,14 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
               [`${classPrefix}-slide-active`]: current === index,
             })}
             style={itemStyle}
-            key={index}
+            key={key ?? index}
           >
             {child}
           </animated.div>
         )
       }
 
-      function renderItems() {
+      const renderStableItems = () => {
         if (renderChildren && total) {
           const offsetCount = 2
           const startIndex = Math.max(current - offsetCount, 0)
@@ -363,7 +394,7 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
               <div
                 className={`${classPrefix}-slide-placeholder`}
                 style={{
-                  width: `${startIndex * 100}%`,
+                  [isVertical ? 'height' : 'width']: `${startIndex * 100}%`,
                 }}
               />
               {items}
@@ -371,9 +402,17 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
           )
         }
 
-        return React.Children.map(validChildren, (child, index) => {
-          return renderItem(index, child)
-        })
+        if (validChildren) {
+          return validChildren.map((child, index) =>
+            renderItem(index, child, child?.key ?? index)
+          )
+        }
+
+        return null
+      }
+
+      function renderItems() {
+        return renderStableItems()
       }
 
       // Render Track Inner
@@ -464,7 +503,18 @@ export const Swiper = forwardRef<SwiperRef, SwiperProps>(
   })
 )
 
-function modulus(value: number, division: number) {
+export function modulus(value: number, division: number) {
   const remainder = value % division
   return remainder < 0 ? remainder + division : remainder
+}
+
+export function getSwipeToPosition(
+  current: number,
+  targetIndex: number,
+  total: number,
+) {
+  const totalWidth = 100 * total
+  let delta = modulus(targetIndex * 100 - current, totalWidth)
+  if (delta > totalWidth / 2) delta -= totalWidth
+  return current + delta
 }

@@ -16,6 +16,7 @@ const thTH = mergeLocale(base, {
     confirm: 'ยืนยัน',
     start: 'เริ่ม',
     end: 'เสร็จ',
+    startAndEnd: 'เริ่ม/เสร็จ',
     today: 'วันนี้',
     markItems: [
       'วันจันทร์',
@@ -123,6 +124,9 @@ const thTH = mergeLocale(base, {
   },
   Modal: {
     ok: 'ฉันรู้แล้ว',
+  },
+  NumberKeyboard: {
+    backspace: 'ลบ',
   },
   PasscodeInput: {
     name: 'ป้อนรหัสผ่าน',

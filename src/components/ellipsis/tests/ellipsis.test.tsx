@@ -1,5 +1,6 @@
+import { spyElementPrototypes } from 'rc-util/lib/test/domHook'
 import React from 'react'
-import { render, testA11y, fireEvent } from 'testing'
+import { fireEvent, render, testA11y } from 'testing'
 import Ellipsis from '..'
 
 const classPrefix = `adm-ellipsis`
@@ -9,34 +10,18 @@ const content =
 const lineHeight = 19.5
 
 describe('Ellipsis', () => {
-  const originGetComputedStyle = window.getComputedStyle
-
   beforeAll(() => {
-    window.getComputedStyle = el => {
-      const style = originGetComputedStyle(el)
-      style.lineHeight = `${lineHeight}px`
-      return style
-    }
-  })
-
-  beforeEach(() => {
-    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
-      get() {
-        if (this.innerHTML.includes('...')) {
-          const row = Math.ceil(
-            // the width of '...' is equal to a Chinese char
-            (this.innerHTML.replace(/\.\.\./g, '中').length / content.length) *
-              4
-          )
-          return lineHeight * row
-        }
-        return lineHeight * 4
+    spyElementPrototypes(HTMLElement, {
+      offsetHeight: {
+        get() {
+          const that = this as HTMLElement
+          const charLen = (that.textContent || '').length || 1
+          const rows = Math.ceil(charLen / 30)
+          const styleLineHeight = parseFloat(that.style.lineHeight)
+          return Math.round(rows * (styleLineHeight || lineHeight))
+        },
       },
     })
-  })
-
-  afterAll(() => {
-    window.getComputedStyle = originGetComputedStyle
   })
 
   test('a11y', async () => {
@@ -118,10 +103,27 @@ describe('Ellipsis', () => {
     expect(ellipsis).toHaveTextContent('...')
   })
 
+  test('check onEllipsis should be work', () => {
+    const toggle = jest.fn()
+    const { getByText } = render(
+      <Ellipsis
+        content={content}
+        defaultExpanded
+        expandText='expand'
+        collapseText='collapse'
+        onExpand={ellipsis => {
+          toggle(ellipsis)
+        }}
+      />
+    )
+    fireEvent.click(getByText('collapse'))
+    expect(toggle).toBeCalledWith(false)
+
+    fireEvent.click(getByText('expand'))
+    expect(toggle).toBeCalledWith(true)
+  })
+
   test('content not exceeded', () => {
-    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
-      value: lineHeight,
-    })
     const { getByTestId } = render(
       <Ellipsis content='abc' data-testid='ellipsis' />
     )
@@ -152,21 +154,29 @@ describe('Ellipsis', () => {
     expect(getByText('collapse')).toBeInTheDocument()
   })
 
-  test('the `whiteSpace` style of the calc container should be the same as Ellipsis', () => {
-    let container: Element | null = null
-    Object.defineProperty(HTMLElement.prototype, 'removeChild', {
-      value: (child: Element) => {
-        container = child
-      },
-    })
-    render(
-      <Ellipsis
-        style={{
-          whiteSpace: 'pre-wrap',
-        }}
-        content={content}
-      />
+  test('non-integer line height', () => {
+    const rows = 2
+    const lineHeight = '16.4px'
+
+    const { getByTestId } = render(
+      <React.Fragment>
+        <Ellipsis
+          rows={rows}
+          style={{ lineHeight }}
+          content={content}
+          data-testid='ellipsis'
+        />
+        <div style={{ lineHeight }} data-testid='maxheight'>
+          {content}
+        </div>
+      </React.Fragment>
     )
-    expect(container).toHaveStyle('white-space: pre-wrap')
+
+    const { offsetHeight } = getByTestId('ellipsis') || {}
+    const { offsetHeight: maxheight } = getByTestId('maxheight') || {}
+    const rowsHeight = Math.round(parseFloat(lineHeight) * rows)
+    const expectHeight = Math.min(rowsHeight, maxheight)
+
+    expect(offsetHeight).toBe(expectHeight)
   })
 })

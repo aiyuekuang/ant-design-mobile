@@ -1,35 +1,42 @@
+import classNames from 'classnames'
+import type { FC, ReactNode, RefObject } from 'react'
 import React, {
   forwardRef,
+  useCallback,
   useImperativeHandle,
   useRef,
   useState,
-  useCallback,
 } from 'react'
-import type { FC, ReactNode } from 'react'
-import { mergeProps } from '../../utils/with-default-props'
 import {
   GetContainer,
   renderToContainer,
 } from '../../utils/render-to-container'
+import { mergeProps } from '../../utils/with-default-props'
 import Mask from '../mask'
 import SafeArea from '../safe-area'
 import { Slide } from './slide'
 import { Slides, SlidesRef } from './slides'
-import classNames from 'classnames'
 
 const classPrefix = `adm-image-viewer`
 
 export type ImageViewerProps = {
-  image?: string
+  image: string
   maxZoom?: number | 'auto'
   getContainer?: GetContainer
   visible?: boolean
   onClose?: () => void
   afterClose?: () => void
   renderFooter?: (image: string) => ReactNode
+  imageRender?: (
+    image: string,
+    { ref, index }: { ref: RefObject<HTMLImageElement>; index: number }
+  ) => ReactNode
   classNames?: {
     mask?: string
     body?: string
+  }
+  mask?: {
+    onClick?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => void
   }
 }
 
@@ -45,11 +52,12 @@ export const ImageViewer: FC<ImageViewerProps> = p => {
   const node = (
     <Mask
       visible={props.visible}
+      afterClose={props?.afterClose}
+      className={props?.classNames?.mask}
+      onMaskClick={props.mask?.onClick}
       disableBodyScroll={false}
       opacity='thick'
-      afterClose={props.afterClose}
       destroyOnClose
-      className={props?.classNames?.mask}
     >
       <div
         className={classNames(
@@ -57,11 +65,12 @@ export const ImageViewer: FC<ImageViewerProps> = p => {
           props?.classNames?.body
         )}
       >
-        {props.image && (
+        {(props.image || typeof props.imageRender === 'function') && (
           <Slide
             image={props.image}
             onTap={props.onClose}
             maxZoom={props.maxZoom}
+            imageRender={props.imageRender}
           />
         )}
       </div>
@@ -80,12 +89,16 @@ export type MultiImageViewerRef = SlidesRef
 
 export type MultiImageViewerProps = Omit<
   ImageViewerProps,
-  'image' | 'renderFooter'
+  'image' | 'renderFooter' | 'imageRender'
 > & {
   images?: string[]
   defaultIndex?: number
   onIndexChange?: (index: number) => void
   renderFooter?: (image: string, index: number) => ReactNode
+  imageRender?: (
+    image: string,
+    { ref, index }: { ref: RefObject<HTMLImageElement>; index: number }
+  ) => ReactNode
 }
 
 const multiDefaultProps = {
@@ -120,11 +133,12 @@ export const MultiImageViewer = forwardRef<
   const node = (
     <Mask
       visible={props.visible}
+      afterClose={props?.afterClose}
+      className={props?.classNames?.mask}
+      onMaskClick={props.mask?.onClick}
       disableBodyScroll={false}
       opacity='thick'
-      afterClose={props.afterClose}
       destroyOnClose
-      className={props?.classNames?.mask}
     >
       <div
         className={classNames(
@@ -140,6 +154,7 @@ export const MultiImageViewer = forwardRef<
             images={props.images}
             onTap={props.onClose}
             maxZoom={props.maxZoom}
+            imageRender={props.imageRender}
           />
         )}
       </div>

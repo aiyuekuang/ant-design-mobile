@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
-import { Button } from 'antd'
+import { Button } from 'antd-mobile'
+import { Link } from 'dumi'
+import React, { useEffect, useState } from 'react'
 import Lottie from 'react-lottie'
-import styles from './index.local.less'
 import { useTrans } from '../../../../hooks/useTrans'
+import styles from './index.local.less'
 
 export default (props: { isWidthScreen: boolean }) => {
   const [startFireAnimation, setStartFireAnimation] = useState(false)
@@ -35,20 +36,24 @@ export default (props: { isWidthScreen: boolean }) => {
           )}
         </div>
         <div className={styles.mainSectionButtonAction}>
-          <Button
-            shape='round'
-            className={styles.buttonLeft}
-            href={trans('/guide/quick-start', '/zh/guide/quick-start')}
-          >
-            {trans('Get Start', '开始使用')}
-          </Button>
-          <Button
-            shape='round'
-            className={styles.buttonRight}
-            href={trans('/components', '/zh/components')}
-          >
-            {trans('Preview Online', '在线体验')}
-          </Button>
+          <Link to={trans('/guide/quick-start', '/zh/guide/quick-start')}>
+            <Button
+              color='primary'
+              shape='rounded'
+              className={styles.buttonLeft}
+            >
+              {trans('Get Started', '开始使用')}
+            </Button>
+          </Link>
+          <Link to={trans('/components', '/zh/components')}>
+            <Button
+              color='primary'
+              shape='rounded'
+              className={styles.buttonRight}
+            >
+              {trans('Preview Online', '在线体验')}
+            </Button>
+          </Link>
         </div>
       </div>
       <div className={styles.imageContainer}>

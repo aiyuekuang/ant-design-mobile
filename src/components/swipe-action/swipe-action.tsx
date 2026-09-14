@@ -1,3 +1,6 @@
+import { animated, useSpring } from '@react-spring/web'
+import { useDrag } from '@use-gesture/react'
+import type { ReactNode } from 'react'
 import React, {
   forwardRef,
   RefObject,
@@ -5,17 +8,14 @@ import React, {
   useImperativeHandle,
   useRef,
 } from 'react'
-import type { ReactNode } from 'react'
-import { mergeProps } from '../../utils/with-default-props'
-import { useSpring, animated } from '@react-spring/web'
-import { useDrag } from '@use-gesture/react'
-import Button from '../button'
-import { nearest } from '../../utils/nearest'
 import { NativeProps, withNativeProps } from '../../utils/native-props'
+import { nearest } from '../../utils/nearest'
+import { mergeProps } from '../../utils/with-default-props'
 import {
   PropagationEvent,
   withStopPropagation,
 } from '../../utils/with-stop-propagation'
+import Button from '../button'
 
 const classPrefix = `adm-swipe-action`
 
@@ -50,6 +50,7 @@ export type SwipeActionProps = {
   children: ReactNode
   stopPropagation?: PropagationEvent[]
   onActionsReveal?: (side: SideType) => void
+  onClose?: () => void
 } & NativeProps<'--background'>
 
 const defaultProps = {
@@ -94,6 +95,15 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
     function forceCancelDrag() {
       dragCancelRef.current?.()
       draggingRef.current = false
+    }
+
+    function open(side: SideType) {
+      if (side === 'right') {
+        api.start({ x: -getRightWidth() })
+      } else {
+        api.start({ x: getLeftWidth() })
+      }
+      p.onActionsReveal?.(side)
     }
 
     const bind = useDrag(
@@ -150,45 +160,44 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
       }
     )
 
-    function close() {
+    const close = () => {
       api.start({
         x: 0,
       })
       forceCancelDrag()
+      props.onClose?.()
     }
 
     useImperativeHandle(ref, () => ({
       show: (side: SideType = 'right') => {
-        if (side === 'right') {
-          api.start({
-            x: -getRightWidth(),
-          })
-        } else if (side === 'left') {
-          api.start({
-            x: getLeftWidth(),
-          })
-        }
-        p.onActionsReveal?.(side)
+        open(side)
       },
       close,
     }))
 
     useEffect(() => {
       if (!props.closeOnTouchOutside) return
-      function handle(e: Event) {
-        if (x.get() === 0) {
-          return
-        }
-        const root = rootRef.current
-        if (root && !root.contains(e.target as Node)) {
+      const root = rootRef.current
+      if (!root) return
+      function onTouchOutside(e: Event) {
+        if (x.goal === 0) return
+        if (!root?.contains(e.target as Node)) {
           close()
         }
       }
-      document.addEventListener('touchstart', handle)
-      return () => {
-        document.removeEventListener('touchstart', handle)
+      function onFocusOutside(e: FocusEvent) {
+        if (x.goal === 0) return
+        if (!root?.contains(e.relatedTarget as Node)) {
+          close()
+        }
       }
-    }, [props.closeOnTouchOutside])
+      document.addEventListener('touchstart', onTouchOutside)
+      root.addEventListener('focusout', onFocusOutside)
+      return () => {
+        document.removeEventListener('touchstart', onTouchOutside)
+        root.removeEventListener('focusout', onFocusOutside)
+      }
+    }, [props.closeOnTouchOutside, props.onClose])
 
     function renderAction(action: Action) {
       const color = action.color ?? 'light'
@@ -231,6 +240,9 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
             <div
               className={`${classPrefix}-actions ${classPrefix}-actions-left`}
               ref={leftRef}
+              onFocus={() => {
+                if (x.goal !== getLeftWidth()) open('left')
+              }}
             >
               {props.leftActions.map(renderAction)}
             </div>
@@ -260,6 +272,9 @@ export const SwipeAction = forwardRef<SwipeActionRef, SwipeActionProps>(
             <div
               className={`${classPrefix}-actions ${classPrefix}-actions-right`}
               ref={rightRef}
+              onFocus={() => {
+                if (x.goal !== -getRightWidth()) open('right')
+              }}
             >
               {props.rightActions.map(renderAction)}
             </div>

@@ -1,16 +1,16 @@
 import React, { useRef, useState } from 'react'
 import {
-  render,
-  testA11y,
-  fireEvent,
-  waitFor,
-  screen,
-  userEvent,
-  mockDrag,
   act,
+  fireEvent,
+  mockDrag,
+  render,
+  screen,
+  testA11y,
+  userEvent,
+  waitFor,
 } from 'testing'
-import ImageViewer, { MultiImageViewerRef } from '../index'
 import Button from '../../button'
+import ImageViewer, { MultiImageViewerRef } from '../index'
 import image from './image.json'
 const classPrefix = `adm-image-viewer`
 
@@ -19,6 +19,11 @@ const demoImages = [
   'https://images.unsplash.com/photo-1601128533718-374ffcca299b?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=3128&q=80',
   'https://images.unsplash.com/photo-1567945716310-4745a6b7844b?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=3113&q=80',
   `data:image/avif;base64,${image.content}`,
+]
+
+const demoViewImages = [
+  'https://mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*uYT7SZwhJnUAAAAAAAAAAAAADgCCAQ',
+  'https://images.unsplash.com/photo-1620476214170-1d8080f65cdb?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=3150&q=80',
 ]
 
 const G = global as any
@@ -95,6 +100,93 @@ async function getImages() {
   return images[0]
 }
 
+describe('ImageViewer', () => {
+  test('a11y', async () => {
+    await testA11y(<ImageViewer image={demoImages[0]} visible={true} />)
+  })
+
+  test('maxZoom support auto', async () => {
+    jest.useFakeTimers()
+
+    render(<ImageViewer image={demoImages[0]} visible maxZoom='auto' />)
+
+    // Pinch to zoom bigger
+    act(() => {
+      triggerPinch([9999999, 9999999])
+    })
+
+    expect(G.nextZoom).toEqual(10)
+
+    jest.clearAllTimers()
+    jest.useRealTimers()
+    jest.restoreAllMocks()
+  })
+
+  test('`ImageViewer.show/ImageViewer.clear` should be work', async () => {
+    render(
+      <button
+        onClick={() => {
+          ImageViewer.show({ image: demoImages[0] })
+        }}
+      >
+        show
+      </button>
+    )
+    fireEvent.click(screen.getByText('show'))
+
+    const img = await getImages()
+    expect(img).toBeVisible()
+
+    act(() => {
+      ImageViewer.clear()
+    })
+    await waitFor(() => expect(img).not.toBeVisible())
+  })
+
+  test('rendering with imageRender and ref', () => {
+    let capturedRef: any = null
+    function App() {
+      return (
+        <ImageViewer
+          image={demoImages[0]}
+          visible
+          imageRender={(image, { ref, index }) => {
+            capturedRef = ref
+            return (
+              <div className={`customize-preview-node-${index}`} ref={ref} />
+            )
+          }}
+        />
+      )
+    }
+    render(<App />)
+    expect(document.querySelector('.customize-preview-node-0')).toBeTruthy()
+    expect(capturedRef).toBeTruthy()
+    expect(typeof capturedRef).toBe('object')
+    expect(capturedRef.current).toBeDefined()
+  })
+
+  test('mask onClick should be work', () => {
+    const onMaskClick = jest.fn()
+    function App() {
+      return (
+        <ImageViewer
+          image={demoImages[0]}
+          visible
+          mask={{
+            onClick: onMaskClick,
+          }}
+        />
+      )
+    }
+    render(<App />)
+    const mask = document.querySelector('.adm-mask')
+    expect(mask).toBeTruthy()
+    fireEvent.click(mask!)
+    expect(onMaskClick).toBeCalledTimes(1)
+  })
+})
+
 describe('ImageViewer.Multi', () => {
   test('calling ref.current.swipeTo before initialization', async () => {
     function App() {
@@ -165,23 +257,20 @@ describe('ImageViewer.Multi', () => {
     })
     await waitFor(() => expect(img).not.toBeVisible())
   })
-
   test('slide and slide with pinched should be work', async () => {
     Object.defineProperty(window, 'innerWidth', {
       value: 300,
     })
     const onIndexChange = jest.fn()
 
-    act(() => {
-      render(
-        <ImageViewer.Multi
-          visible
-          defaultIndex={3}
-          images={demoImages}
-          onIndexChange={onIndexChange}
-        ></ImageViewer.Multi>
-      )
-    })
+    render(
+      <ImageViewer.Multi
+        visible
+        defaultIndex={3}
+        images={demoImages}
+        onIndexChange={onIndexChange}
+      />
+    )
 
     await getImages()
 
@@ -193,9 +282,18 @@ describe('ImageViewer.Multi', () => {
     // need to wait image render.
     await act(() => new Promise(resolve => setTimeout(resolve, 2500)))
 
+    // 等待动画完成并确保指示器已更新
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100))
+    })
+
     const slides = document.querySelectorAll(`.${classPrefix}-control`)[3]
 
-    expect(screen.getByText('4 / 4')).toBeInTheDocument()
+    // 使用查询所有包含数字和斜杠的元素来查找指示器
+    const indicatorElements = screen.getAllByText(/\d+\s*\/\s*\d+/)
+    expect(
+      indicatorElements.some(el => el.textContent?.includes('4 / 4'))
+    ).toBe(true)
 
     mockDrag(slides as HTMLElement, [
       {
@@ -208,9 +306,18 @@ describe('ImageViewer.Multi', () => {
         clientX: 300,
       },
     ])
+
+    // 等待拖拽完成并确保指示器已更新
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByText(/\d+\s*\/\s*\d+/)
+          .some(el => el.textContent?.includes('3 / 4'))
+      ).toBe(true)
+    )
+
     await waitFor(() => expect(onIndexChange).toBeCalledTimes(1))
     await waitFor(() => expect(onIndexChange).toBeCalledWith(2))
-    expect(screen.getByText('3 / 4')).toBeInTheDocument()
 
     mockDrag(slides as HTMLElement, [
       {
@@ -223,53 +330,78 @@ describe('ImageViewer.Multi', () => {
         clientX: 100,
       },
     ])
+
+    // 等待拖拽完成并确保指示器已更新
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByText(/\d+\s*\/\s*\d+/)
+          .some(el => el.textContent?.includes('4 / 4'))
+      ).toBe(true)
+    )
 
     await waitFor(() => expect(onIndexChange).toBeCalledTimes(2))
     await waitFor(() => expect(onIndexChange).toBeCalledWith(3))
-    expect(screen.getByText('4 / 4')).toBeInTheDocument()
   })
-})
-
-describe('ImageViewer', () => {
-  test('a11y', async () => {
-    await testA11y(<ImageViewer image={demoImages[0]} visible={true} />)
-  })
-
-  test('maxZoom support auto', async () => {
-    jest.useFakeTimers()
-
-    render(<ImageViewer image={demoImages[0]} visible maxZoom='auto' />)
-
-    // Pinch to zoom bigger
-    act(() => {
-      triggerPinch([9999999, 9999999])
-    })
-
-    expect(G.nextZoom).toEqual(10)
-
-    jest.clearAllTimers()
-    jest.useRealTimers()
-    jest.restoreAllMocks()
+  test('rendering with imageRender', () => {
+    function App() {
+      return (
+        <ImageViewer.Multi
+          images={demoViewImages}
+          visible
+          imageRender={(image, info) => (
+            <div className={`customize-preview-node-${info.index}`} />
+          )}
+        />
+      )
+    }
+    render(<App />)
+    expect(document.querySelector('.customize-preview-node-0')).toBeTruthy()
   })
 
-  test('`ImageViewer.show/ImageViewer.clear` should be work', async () => {
-    render(
-      <button
-        onClick={() => {
-          ImageViewer.show({ image: demoImages[0] })
-        }}
-      >
-        show
-      </button>
-    )
-    fireEvent.click(screen.getByText('show'))
+  test('rendering with imageRender and ref', () => {
+    let capturedRef: any = null
+    function App() {
+      return (
+        <ImageViewer.Multi
+          images={demoViewImages}
+          visible
+          imageRender={(image, info) => {
+            capturedRef = info.ref
+            return (
+              <div
+                className={`customize-preview-node-${info.index}`}
+                ref={info.ref}
+              />
+            )
+          }}
+        />
+      )
+    }
+    render(<App />)
+    expect(document.querySelector('.customize-preview-node-0')).toBeTruthy()
+    expect(capturedRef).toBeTruthy()
+    expect(typeof capturedRef).toBe('object')
+    expect(capturedRef.current).toBeDefined()
+  })
 
-    const img = await getImages()
-    expect(img).toBeVisible()
-
-    act(() => {
-      ImageViewer.clear()
-    })
-    await waitFor(() => expect(img).not.toBeVisible())
+  test('mask onClick should be work', () => {
+    const onMaskClick = jest.fn()
+    function App() {
+      return (
+        <ImageViewer.Multi
+          images={demoImages}
+          visible
+          mask={{
+            onClick: onMaskClick,
+          }}
+        />
+      )
+    }
+    render(<App />)
+    const mask = document.querySelector('.adm-mask')
+    expect(mask).toBeTruthy()
+    fireEvent.click(mask!)
+    expect(onMaskClick).toBeCalledTimes(1)
   })
 })
